@@ -1,239 +1,377 @@
 # Backlog RutaExpress - Desglose de Tareas
 
-Este documento contiene el backlog del proyecto desglosado en tareas pequeñas y modulares, separadas por Sprints. 
-Está diseñado para evitar conflictos de integración ("merge conflicts") y enfocar el esfuerzo en lo que requiere la pauta de evaluación.
-El formato utilizado permite que un script pueda leer este archivo y generar los Issues automáticamente en GitHub (separando cada Issue con `---`).
+Este documento contiene el backlog del proyecto desglosado en tareas modulares, estructuradas por Sprints para cubrir el 100% de la pauta de evaluación.
+El formato utilizado permite la sincronización automática con GitHub Issues (separando cada Issue con `---`).
 
-## Sprint 1 - Evaluación Parcial 1 (Seguridad, BFF y CRUD Envíos)
-*Objetivo: Cumplir con el 100% de la pauta de evaluación N°1, logrando un flujo de autenticación seguro y dos pantallas funcionales conectadas a la base de datos.*
+---
+## Resumen de Sprints y Cobertura
+- **Sprint 1 - Evaluación Parcial 1 (16 Issues):** Autenticación Azure AD (MSAL), BFF Spring Boot con RBAC, Microservicio Shipments con BD Cloud, Contenedores Docker, Despliegue en AWS EC2, Protección perimetral con AWS API Gateway (JWT Authorizer) y Vistas funcionales en Angular.
+- **Sprint 2 - Asincronía, Analítica e Infraestructura Avanzada (10 Issues):** Clúster RabbitMQ con DLQ, Clúster Kafka y Zookeeper, Microservicios de Catálogo, Notificaciones, Auditoría y Reportes (KPIs), Dashboard en Frontend y Despliegue multi-EC2 en AWS.
+
+---
+
+## Sprint 1 - Evaluación Parcial 1 (Seguridad, BFF, EC2, API Gateway y CRUD Envíos)
+*Objetivo: Cumplir con el 100% de la pauta de evaluación N°1, logrando un flujo de autenticación seguro de extremo a extremo y pantallas funcionales conectadas a la nube.*
 
 ---
 **Title:** [Infra] Configurar App Registration en Azure AD
 **Labels:** security, devops
 **Size:** S
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-Configurar el entorno de identidad (IDaaS) en Azure Active Directory para el login corporativo.
+Configurar el entorno de identidad (IDaaS) en Azure Active Directory / Microsoft Entra ID para el login corporativo.
 
 **Criterios de Aceptación:**
-- [ ] La aplicación "RutaExpress" existe en Azure AD.
-- [ ] Se obtienen las credenciales (`clientId` y `tenantId`).
-- [ ] La URL de redirección (ej. `http://localhost:4200`) está configurada para el Frontend.
-- [ ] La API (App ID URI) está expuesta con los scopes correspondientes (`api://<API_CLIENT_ID>`).
-- [ ] Las credenciales de desarrollo están documentadas en el README.
+- [x] La aplicación "RutaExpress" existe en Azure AD.
+- [x] Se obtienen las credenciales (`clientId` y `tenantId`).
+- [x] La URL de redirección (ej. `http://localhost:4200`) está configurada para el Frontend.
+- [x] La API (App ID URI) está expuesta con los scopes correspondientes (`api://<API_CLIENT_ID>/access_as_user`).
+- [x] Las credenciales de desarrollo están documentadas en `.env.example`.
+
+---
+**Title:** [Backend] Inicializar ms-rutaexpress-bff (Resource Server OAuth2)
+**Labels:** backend, security, task
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+Crear el microservicio Backend For Frontend (BFF) en Spring Boot que actúa como punto de entrada de la aplicación, configurado como Resource Server OAuth2 para validar tokens JWT emitidos por Azure AD (Entra ID).
+
+**Criterios de Aceptación:**
+- [ ] Proyecto Spring Boot 3.x inicializado con Java 17 en `BACKEND/ms-rutaexpress-bff`.
+- [ ] Se valida que el token recibido pertenezca al `issuer-uri` y `jwk-set-uri` de Azure AD.
+- [ ] Retorna HTTP 401 si se intenta consumir un endpoint protegido sin token o con token inválido.
+- [ ] Expone endpoint de salud público `/actuator/health` o `/api/public/health` con HTTP 200.
+
+---
+**Title:** [Backend] Configurar extracción de Roles y RBAC en ms-rutaexpress-bff
+**Labels:** backend, security
+**Size:** S
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+*Depende de: [Backend] Inicializar ms-rutaexpress-bff*
+Parsear los claims del token JWT de Azure AD para manejar autorización basada en roles (RBAC) en el BFF.
+
+**Criterios de Aceptación:**
+- [ ] El `JwtAuthenticationConverter` extrae los roles y claims del token (`roles` o `groups`) mapeándolos a `ROLE_ADMIN`, `ROLE_DESPACHADOR`, `ROLE_CLIENTE`.
+- [ ] Endpoint de prueba (ej. `/api/test-admin`) retorna HTTP 403 Forbidden si el rol no coincide.
+- [ ] Respuestas de error 401 y 403 debidamente formateadas en JSON con código y mensaje estándar.
+
+---
+**Title:** [Backend] Inicializar ms-rutaexpress-shipments y conexión a BD Cloud
+**Labels:** backend, database, task
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+Crear el microservicio de negocio para el ciclo de vida de los envíos con persistencia en Base de Datos Cloud (Oracle Cloud / RDS).
+
+**Criterios de Aceptación:**
+- [ ] Proyecto Spring Boot 3.x inicializado en `BACKEND/ms-rutaexpress-shipments`.
+- [ ] Conexión exitosa a la base de datos cloud configurada mediante JPA/Hibernate.
+- [ ] Entidad `Shipment` y repositorio `ShipmentRepository` implementados correctamente.
+- [ ] Scripts o migraciones iniciales para estructura de tablas.
+
+---
+**Title:** [Backend] CRUD Básico y Validación de Máquina de Estados en ms-rutaexpress-shipments
+**Labels:** backend, feature
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+*Depende de: [Backend] Inicializar ms-rutaexpress-shipments*
+Habilitar las operaciones de creación, consulta y transición de estados del ciclo de vida de envíos.
+
+**Criterios de Aceptación:**
+- [ ] `POST /api/shipments` crea un envío en estado "CREADO" y retorna HTTP 201 con ID generado.
+- [ ] `GET /api/shipments/{id}` retorna HTTP 200 con el detalle o HTTP 404 si no existe.
+- [ ] `GET /api/shipments` retorna el listado de envíos con soporte a filtros (estado, fechas).
+- [ ] `PUT /api/shipments/{id}/status` valida la progresión estricta: `CREADO -> ACEPTADO -> EN_BODEGA -> EN_RUTA -> ENTREGADO` (o `CANCELADO`).
+- [ ] Transiciones inválidas son rechazadas con HTTP 400 Bad Request y mensaje descriptivo.
+
+---
+**Title:** [Backend] Configurar Enrutamiento en ms-rutaexpress-bff hacia ms-rutaexpress-shipments
+**Labels:** backend, feature
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+*Depende de: [Backend] Inicializar ms-rutaexpress-bff, [Backend] CRUD Básico ms-rutaexpress-shipments*
+Configurar el BFF para orquestar y reenviar peticiones autenticadas y autorizadas hacia el microservicio `ms-rutaexpress-shipments`.
+
+**Criterios de Aceptación:**
+- [ ] Endpoints `/api/bff/shipments/**` enrutan de forma segura hacia el servicio de envíos.
+- [ ] Propagación de identidad y contexto del usuario autenticado.
+- [ ] Manejo de resiliencia y timeouts en caso de indisponibilidad del servicio de envíos.
+
+---
+**Title:** [DevOps] Dockerizar microservicios (Dockerfile y compose.yml de apps)
+**Labels:** devops, task
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+Crear las imágenes Docker y la orquestación para levantar los microservicios backend de forma contenerizada.
+
+**Criterios de Aceptación:**
+- [ ] `Dockerfile` multi-stage optimizado para `ms-rutaexpress-bff`.
+- [ ] `Dockerfile` multi-stage optimizado para `ms-rutaexpress-shipments`.
+- [ ] Archivo `infra/apps/compose.yml` que levanta ambos servicios en una red común pasando variables de entorno.
+- [ ] Verificación local de que los contenedores levantan y comunican sin errores.
+
+---
+**Title:** [Infra] Despliegue de microservicios en instancia AWS EC2
+**Labels:** devops, infra
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+*Depende de: [DevOps] Dockerizar microservicios*
+Aprovisionar y configurar una instancia AWS EC2 para ejecutar los contenedores de los microservicios backend con Docker Compose.
+
+**Criterios de Aceptación:**
+- [ ] Instancia EC2 en ejecución con Docker y Docker Compose instalados.
+- [ ] Security Groups configurados para permitir tráfico únicamente desde los puertos autorizados (SSH y puerto HTTP/BFF).
+- [ ] Contenedores de `ms-rutaexpress-bff` y `ms-rutaexpress-shipments` activos y respondiendo correctamente.
+
+---
+**Title:** [Infra] Configurar AWS API Gateway (HTTP API + JWT Authorizer Azure AD)
+**Labels:** devops, security, infra
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+Configurar la capa perimetral del sistema en AWS API Gateway para proteger el backend desplegado en EC2.
+
+**Criterios de Aceptación:**
+- [ ] HTTP API creada en AWS API Gateway.
+- [ ] JWT Authorizer configurado con Issuer `https://login.microsoftonline.com/<TENANT_ID>/v2.0` y Audience `api://<BACKEND_CLIENT_ID>`.
+- [ ] Peticiones sin token o con token inválido retornan HTTP 401 a nivel perimetral antes de alcanzar la instancia EC2.
+- [ ] Peticiones válidas son enrutadas exitosamente hacia la IP/DNS de la instancia EC2 donde corre el BFF.
 
 ---
 **Title:** [Frontend] Inicializar proyecto Angular y estructura base
 **Labels:** frontend, task
 **Size:** S
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-Crear la aplicación Angular vacía (frontend-rutaexpress) que servirá de base.
+Crear la aplicación base en Angular en la carpeta `FRONTEND` configurando estándares y buenas prácticas.
 
 **Criterios de Aceptación:**
-- [ ] El proyecto compila correctamente con `ng serve`.
-- [ ] La estructura inicial existe dentro de la carpeta `FRONTEND`.
-- [ ] El archivo `.gitignore` incluye la exclusión de `node_modules` y directorios de compilación.
-
----
-**Title:** [Backend] Inicializar ms-rutaexpress-bff (Backend For Frontend)
-**Labels:** backend, security, task
-**Size:** M
-**Body:**
-Crear el microservicio proxy/BFF en Spring Boot que valida los tokens y rutea al dominio.
-
-**Criterios de Aceptación:**
-- [ ] El proyecto Spring Boot levanta correctamente en un puerto definido (ej. 8080).
-- [ ] Se valida que el token recibido desde el frontend pertenece al `issuer-uri` correcto de Azure AD.
-- [ ] Retorna HTTP 401 si se intenta consumir un endpoint protegido sin token o con token inválido.
-
----
-**Title:** [Frontend] Integrar MSAL y flujo de Login
-**Labels:** frontend, security
-**Size:** M
-**Body:**
-*Depende de: [Infra] Configurar App Registration en Azure AD*
-Configurar la autenticación utilizando la librería oficial de Microsoft.
-
-**Criterios de Aceptación:**
-- [ ] El botón "Iniciar sesión con Microsoft" redirige correctamente al login de Azure.
-- [ ] Tras el login exitoso, la aplicación captura y almacena el Token JWT (`access_token`).
-- [ ] El usuario es redirigido a una página privada inicial (ej. `/dashboard`).
-
----
-**Title:** [Frontend] Implementar Guards e Interceptor MSAL
-**Labels:** frontend, security
-**Size:** S
-**Body:**
-*Depende de: [Frontend] Integrar MSAL y flujo de Login*
-Asegurar las rutas en el frontend y habilitar la comunicación segura con el backend.
-
-**Criterios de Aceptación:**
-- [ ] `MsalGuard` bloquea el acceso a rutas privadas a usuarios no autenticados, redirigiéndolos al login.
-- [ ] `MsalInterceptor` inyecta correctamente el encabezado `Authorization: Bearer <token>` en todas las peticiones HTTP que vayan a `/api/*`.
-
----
-**Title:** [Backend] Configurar extracción de Roles en ms-rutaexpress-bff
-**Labels:** backend, security
-**Size:** S
-**Body:**
-*Depende de: [Backend] Inicializar ms-rutaexpress-bff*
-Parsear los claims del JWT para manejar la autorización basada en roles (RBAC).
-
-**Criterios de Aceptación:**
-- [ ] El `JwtAuthenticationConverter` extrae los roles y los mapea a "ROLE_ADMIN", "ROLE_DESPACHADOR", etc.
-- [ ] Un endpoint de prueba (ej. `/api/test-admin`) retorna HTTP 403 si el token pertenece a un usuario Cliente.
+- [ ] Proyecto Angular inicializado y compilando correctamente con `ng serve`.
+- [ ] Estructura modular de carpetas (`core/`, `shared/`, `features/`).
+- [ ] Variables de entorno configuradas (`environment.ts` con URLs de API Gateway y credenciales Azure AD).
 
 ---
 **Title:** [Frontend] Maquetación de Layout Principal (Navbar y Sidebar)
 **Labels:** frontend, feature
 **Size:** S
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-Crear la estructura visual que encapsulará las diferentes vistas del sistema.
+*Depende de: [Frontend] Inicializar proyecto Angular*
+Crear la estructura visual que encapsulará las diferentes vistas del sistema con diseño responsivo.
 
 **Criterios de Aceptación:**
-- [ ] La barra de navegación muestra el nombre del usuario y su rol extraídos del token JWT.
-- [ ] Existe un botón funcional de "Cerrar Sesión" que invalida el estado en MSAL.
-- [ ] El diseño base es responsivo y se renderiza correctamente (sin errores en consola).
+- [ ] Barra de navegación muestra el estado de sesión (nombre de usuario y rol activo).
+- [ ] Menú lateral (sidebar) dinámico según los roles del usuario.
+- [ ] Botón funcional de "Cerrar Sesión" que invalida el token y estado en MSAL.
 
 ---
-**Title:** [Backend] Inicializar ms-rutaexpress-shipments (Envíos) - Base de Datos
-**Labels:** backend, task
-**Size:** S
-**Body:**
-Crear el microservicio de negocio encargado del ciclo de vida de los envíos.
-
-**Criterios de Aceptación:**
-- [ ] El proyecto conecta exitosamente a la base de datos Oracle configurada.
-- [ ] JPA genera correctamente la tabla para la entidad `Shipment`.
-- [ ] El repositorio Spring Data `ShipmentRepository` está implementado.
-
----
-**Title:** [Backend] CRUD Básico ms-rutaexpress-shipments
-**Labels:** backend, feature
+**Title:** [Frontend] Integrar MSAL y flujo de Login/Logout
+**Labels:** frontend, security
 **Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-*Depende de: [Backend] Inicializar ms-rutaexpress-shipments*
-Habilitar las operaciones básicas para los envíos.
+*Depende de: [Infra] Configurar App Registration en Azure AD, [Frontend] Inicializar proyecto Angular*
+Configurar la autenticación corporativa con Azure AD mediante `@azure/msal-browser` y `@azure/msal-angular`.
 
 **Criterios de Aceptación:**
-- [ ] `POST /api/shipments` crea el envío en estado "CREADO" y retorna HTTP 201 con el id.
-- [ ] `GET /api/shipments/{id}` retorna HTTP 200 con el detalle del envío o HTTP 404 si no existe.
-- [ ] `GET /api/shipments` retorna una lista paginada o filtrada de los envíos.
+- [ ] Botón de "Iniciar sesión con Microsoft" redirige al login oficial de Azure AD.
+- [ ] Tras login exitoso, se obtiene y almacena el `access_token` JWT.
+- [ ] Redirección automática a la vista privada inicial (`/dashboard` o `/shipments`).
 
 ---
-**Title:** [Backend] Actualización de Estados en ms-rutaexpress-shipments
-**Labels:** backend, feature
+**Title:** [Frontend] Implementar Guards e Interceptor MSAL apuntando a AWS API Gateway
+**Labels:** frontend, security
 **Size:** S
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-*Depende de: [Backend] CRUD Básico ms-rutaexpress-shipments*
-Habilitar la progresión del ciclo de vida de los envíos.
+*Depende de: [Frontend] Integrar MSAL y flujo de Login/Logout, [Infra] Configurar AWS API Gateway*
+Asegurar las rutas en el frontend y configurar la inyección automática del token hacia el endpoint de AWS API Gateway.
 
 **Criterios de Aceptación:**
-- [ ] `PUT /api/shipments/{id}/status` permite actualizar el estado y retorna HTTP 200.
-- [ ] El sistema rechaza con HTTP 400 (Bad Request) transiciones inválidas (Ej: CREADO directo a EN_RUTA).
-- [ ] Se valida la máquina de estados: CREADO -> ACEPTADO -> EN_BODEGA -> EN_RUTA -> ENTREGADO.
+- [ ] `MsalGuard` protege todas las rutas privadas, impidiendo el acceso a usuarios no autenticados.
+- [ ] `MsalInterceptor` inyecta automáticamente la cabecera `Authorization: Bearer <token>` en todas las peticiones dirigidas a la URL base del AWS API Gateway.
+- [ ] Manejo de renovación silenciosa de tokens (`acquireTokenSilent`).
 
 ---
 **Title:** [Frontend] Vista de Listado de Envíos
 **Labels:** frontend, feature
 **Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
 *Depende de: [Frontend] Implementar Guards e Interceptor MSAL*
-Mostrar los envíos llamando al backend protegido.
+Implementar la vista para visualizar y filtrar los envíos consumiendo el backend a través de AWS API Gateway.
 
 **Criterios de Aceptación:**
-- [ ] La tabla de envíos renderiza los datos correctos consumiendo el BFF.
-- [ ] El token de MSAL es adjuntado automáticamente.
-- [ ] Se maneja visualmente el estado de carga y el estado vacío (si no hay envíos).
+- [ ] Tabla interactiva que renderiza el listado de envíos.
+- [ ] Filtros por estado y rango de fechas.
+- [ ] Estados visuales claros de carga (`loading spinner`), error y lista vacía.
 
 ---
-**Title:** [Frontend] Vista de Creación de Envíos y Cambio de Estado
+**Title:** [Frontend] Vista de Creación de Envíos y Transición de Estados
 **Labels:** frontend, feature
 **Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
 *Depende de: [Frontend] Vista de Listado de Envíos*
-Interacción con el negocio (Crear y avanzar estados).
+Implementar el formulario para registrar nuevos envíos y los controles para avanzar estados según rol.
 
 **Criterios de Aceptación:**
-- [ ] El formulario para crear envío captura todos los campos obligatorios antes de enviar (validación frontend).
-- [ ] La tabla incluye una acción (botón/dropdown) visible para Despachadores/Admins que permite avanzar el estado.
-- [ ] Si el backend retorna error de validación de máquina de estados, se muestra una alerta amigable al usuario.
-
-
-## Sprint 2 - Asincronía, Analítica e Infraestructura Avanzada
-*Objetivo: Integrar RabbitMQ, Kafka y despliegue final en la nube (AWS).*
+- [ ] Formulario reactivo con validaciones frontend (campos obligatorios, pesos, direcciones).
+- [ ] Controles de avance de estado (botones/select) visibles únicamente para usuarios autorizados (`ROLE_ADMIN`, `ROLE_DESPACHADOR`).
+- [ ] Notificaciones amigables ante éxito o errores devueltos por la máquina de estados.
 
 ---
-**Title:** [Infra] Crear esqueleto de Docker Compose (RabbitMQ y Kafka)
-**Labels:** devops, task
-**Size:** S
+**Title:** [QA] Pruebas de Integración End-to-End para Evaluación 1
+**Labels:** qa, devops
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-Crear los archivos base para levantar la infraestructura de mensajería en el entorno local (y posteriormente en AWS EC2).
+*Depende de: Todos los issues del Sprint 1*
+Validación completa del flujo integrado según la rúbrica de la Evaluación Parcial 1.
 
 **Criterios de Aceptación:**
-- [ ] El archivo `infra/mq/compose.yml` levanta RabbitMQ con Management UI accesible en puerto 15672.
-- [ ] El archivo `infra/kafka/compose.yml` levanta Zookeeper y Kafka en el puerto 9092.
-- [ ] Los contenedores levantan sin errores y persisten los datos en volúmenes locales.
+- [ ] Flujo E2E verificado: Angular (MSAL) -> AWS API Gateway (JWT Authorizer) -> EC2 (ms-rutaexpress-bff) -> ms-rutaexpress-shipments -> BD Cloud.
+- [ ] Verificación de rechazo 401 en Gateway sin token o con token inválido.
+- [ ] Verificación de rechazo 403 en BFF si el rol no tiene permiso asignado.
+- [ ] Documentación del flujo de pruebas y capturas de evidencia listas para la entrega.
+
 
 ---
-**Title:** [Backend] Inicializar ms-rutaexpress-catalog (Catálogo y Capacidad)
+## Sprint 2 - Asincronía, Analítica e Infraestructura Avanzada
+*Objetivo: Integrar RabbitMQ con DLQ, Kafka para streaming de eventos y analítica en tiempo real, catálogo de couriers y despliegue distribuido en AWS.*
+
+---
+**Title:** [Infra] Crear Docker Compose para clúster RabbitMQ (infra/mq/compose.yml)
+**Labels:** devops, infra
+**Size:** S
+**Milestone:** Sprint 2 - Asincronía y Analítica
+**Body:**
+Crear la infraestructura contenerizada para RabbitMQ en alta disponibilidad con Management UI.
+
+**Criterios de Aceptación:**
+- [ ] Archivo `infra/mq/compose.yml` levanta RabbitMQ accesible en puerto 5672 y UI en 15672.
+- [ ] Configuración inicial de exchanges (`cmd.direct`, `cmd.topic`, `cmd.dead.dlx`) y colas con DLQ.
+- [ ] Persistencia de datos configurada mediante volúmenes.
+
+---
+**Title:** [Infra] Crear Docker Compose para clúster Kafka y Zookeeper (infra/kafka/compose.yml)
+**Labels:** devops, infra
+**Size:** M
+**Milestone:** Sprint 2 - Asincronía y Analítica
+**Body:**
+Crear la infraestructura contenerizada para Kafka, Zookeeper y Kafka UI.
+
+**Criterios de Aceptación:**
+- [ ] Archivo `infra/kafka/compose.yml` levanta Zookeeper y Kafka en el puerto 9092.
+- [ ] Kafka UI disponible y accesible para inspección de tópicos.
+- [ ] Tópico `shipments.events` inicializado con factor de particionamiento adecuado.
+
+---
+**Title:** [Backend] Inicializar ms-rutaexpress-catalog (Catálogo y Capacidad de Flota)
 **Labels:** backend, feature
 **Size:** M
+**Milestone:** Sprint 2 - Asincronía y Analítica
 **Body:**
-Microservicio para administrar tipos de servicio y capacidad de flota de cada courier.
+Microservicio para administrar tipos de servicio de couriers y controlar la capacidad disponible de la flota.
 
 **Criterios de Aceptación:**
-- [ ] Conexión a Oracle DB exitosa.
-- [ ] Endpoints básicos CRUD para gestionar `CatalogService`.
-- [ ] `PUT /api/catalog/services/{id}` permite reducir la capacidad disponible. (Se usará al aceptar un envío).
+- [ ] Conexión a Base de Datos Cloud y entidad `CatalogService`.
+- [ ] Endpoints CRUD para administrar servicios (`GET /api/catalog/services`, `POST`).
+- [ ] `PUT /api/catalog/services/{id}` para reducción atómica de capacidad al aceptar un envío.
 
 ---
 **Title:** [Backend] Configurar Publicador RabbitMQ en ms-rutaexpress-shipments
 **Labels:** backend, devops
 **Size:** S
+**Milestone:** Sprint 2 - Asincronía y Analítica
 **Body:**
-*Depende de: [Infra] Crear esqueleto de Docker Compose (RabbitMQ)*
-Integrar el envío asíncrono de eventos al cambiar de estado.
+Integrar el envío asíncrono de eventos desde el microservicio de envíos hacia RabbitMQ.
 
 **Criterios de Aceptación:**
-- [ ] Al avanzar un envío a estado "ACEPTADO", se envía un mensaje a la cola `q.cmd.email`.
-- [ ] El mensaje enviado usa un formato común ("envelope") incluyendo `eventId` y `timestamp`.
-- [ ] Si RabbitMQ está caído, la aplicación maneja el error (logging) sin botar el proceso principal.
+- [ ] Al cambiar el estado de un envío (ej. "ACEPTADO"), publica mensaje a la cola correspondiente.
+- [ ] Mensaje formateado bajo envelope común (`type`, `eventId`, `timestamp`, `traceId`, `correlationId`).
+- [ ] Resiliencia: si RabbitMQ no está disponible, no se bloquea la transacción principal.
 
 ---
-**Title:** [Backend] Crear microservicio ms-rutaexpress-notify
+**Title:** [Backend] Crear microservicio ms-rutaexpress-notify (Consumidor RabbitMQ y DLQ)
 **Labels:** backend, feature
 **Size:** M
+**Milestone:** Sprint 2 - Asincronía y Analítica
 **Body:**
-*Depende de: [Backend] Configurar Publicador RabbitMQ en ms-rutaexpress-shipments*
-Consumidor asíncrono para notificaciones al destinatario o a bodega.
+Consumidor asíncrono para notificaciones al destinatario y tickets de picking para bodega.
 
 **Criterios de Aceptación:**
-- [ ] El servicio consume exitosamente mensajes de la cola `q.cmd.email`.
-- [ ] Se imprime en log (simulando envío real) la información del correo enviado.
-- [ ] Los mensajes fallidos son ruteados correctamente a la `q.cmd.email.dlq` tras reintentos fallidos.
+- [ ] Servicio consume mensajes desde la cola `q.cmd.email`.
+- [ ] Simulación de envío y logging de eventos.
+- [ ] Mensajes fallidos son reenviados a la cola muerta (`q.cmd.email.dlq`) tras reintentos agotados.
 
 ---
-**Title:** [Backend] Inicializar ms-rutaexpress-audit (Auditoría Kafka)
+**Title:** [Backend] Configurar Productor Kafka en ms-rutaexpress-shipments (Eventos Logísticos)
 **Labels:** backend, devops
-**Size:** L
+**Size:** S
+**Milestone:** Sprint 2 - Asincronía y Analítica
 **Body:**
-Microservicio para almacenar el timeline de trazabilidad logística de forma no bloqueante.
+Publicar eventos inmutables de trazabilidad logística en tiempo real hacia Kafka.
 
 **Criterios de Aceptación:**
-- [ ] El servicio se conecta al broker de Kafka.
-- [ ] Consume correctamente mensajes desde el tópico `shipments.events`.
-- [ ] Los eventos consumidos se insertan como registros inmutables en la base de datos Oracle.
-- [ ] Endpoint `GET /api/audit` expone la información y es de solo lectura.
+- [ ] Productor Kafka configurado en `ms-rutaexpress-shipments`.
+- [ ] Publica eventos logísticos al tópico `shipments.events` en cada cambio de estado.
+- [ ] Serialización JSON y clave de partición basada en `shipmentId`.
 
 ---
-**Title:** [Infra] AWS API Gateway (Configuración)
-**Labels:** devops, security
+**Title:** [Backend] Crear microservicio ms-rutaexpress-audit (Consumidor Kafka e Historial Inmutable)
+**Labels:** backend, feature
 **Size:** M
+**Milestone:** Sprint 2 - Asincronía y Analítica
 **Body:**
-Crear la protección perimetral del sistema a desplegar en AWS.
+Microservicio para persistir el timeline de trazabilidad y auditoría logística de forma desacoplada.
 
 **Criterios de Aceptación:**
-- [ ] El HTTP API está creado en API Gateway.
-- [ ] El JWT Authorizer valida exitosamente los tokens de Azure AD de RutaExpress.
-- [ ] Las peticiones bloqueadas retornan HTTP 401 antes de llegar a la instancia EC2.
-- [ ] Las peticiones válidas son enrutadas al `ms-rutaexpress-bff`.
+- [ ] Consumidor Kafka suscrito al tópico `shipments.events`.
+- [ ] Registros insertados de forma inmutable en Base de Datos Cloud.
+- [ ] Endpoint `GET /api/audit/shipments/{id}` para consultar historial de eventos.
+
+---
+**Title:** [Backend] Crear microservicio ms-rutaexpress-report (Consumidor Kafka y KPIs en tiempo real)
+**Labels:** backend, feature
+**Size:** M
+**Milestone:** Sprint 2 - Asincronía y Analítica
+**Body:**
+Microservicio para procesamiento analítico de métricas operacionales.
+
+**Criterios de Aceptación:**
+- [ ] Consumo de eventos desde Kafka y cálculo de métricas agregadas en memoria o base de datos.
+- [ ] Endpoint `GET /api/report/kpis?range=last24h` (envíos/hora, lead time, estados activos).
+- [ ] Endpoint `GET /api/report/top-services?range=last7d`.
+
+---
+**Title:** [Frontend] Dashboard de Operaciones y Métricas en Tiempo Real
+**Labels:** frontend, feature
+**Size:** M
+**Milestone:** Sprint 2 - Asincronía y Analítica
+**Body:**
+Vista en Angular para visualizar el panel de métricas y KPIs operacionales en tiempo real.
+
+**Criterios de Aceptación:**
+- [ ] Pantalla de Dashboard con tarjetas de KPIs (envíos activos, tiempos de entrega).
+- [ ] Gráficos interactivos de volumen y servicios principales.
+- [ ] Conexión segura hacia el BFF / API Gateway.
+
+---
+**Title:** [Infra] Despliegue Multi-Instancia en AWS (EC2 Apps, EC2 MQ, EC2 Kafka)
+**Labels:** devops, infra
+**Size:** L
+**Milestone:** Sprint 2 - Asincronía y Analítica
+**Body:**
+Despliegue de la arquitectura completa en AWS con instancias EC2 dedicadas y Security Groups restringidos.
+
+**Criterios de Aceptación:**
+- [ ] Instancia `ec2-apps`: microservicios Spring Boot orquestados con `infra/apps/compose.yml`.
+- [ ] Instancia `ec2-mq`: clúster RabbitMQ con `infra/mq/compose.yml`.
+- [ ] Instancia `ec2-kafka`: Zookeeper, Kafka y Kafka UI con `infra/kafka/compose.yml`.
+- [ ] Security Groups configurados para aislar la comunicación interna entre brokers y aplicaciones.
