@@ -1,0 +1,26 @@
+# Environment variables
+.env
+*.env
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Node / Angular (Frontend)
+node_modules/
+dist/
+.angular/
+
+# Java / Spring Boot (Backend)
+target/
+*.class
+*.jar
+*.war
+.gradle/
+build/
