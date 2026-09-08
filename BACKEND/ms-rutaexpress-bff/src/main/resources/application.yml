@@ -1,0 +1,22 @@
+server:
+  port: 8080
+
+spring:
+  config:
+    import: optional:file:../../.env[.properties]
+  application:
+    name: ms-rutaexpress-bff
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:default-tenant-id}/v2.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
