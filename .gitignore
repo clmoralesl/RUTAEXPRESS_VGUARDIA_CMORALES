@@ -29,3 +29,8 @@ build/
 .agents/
 
 DOCS/responsabilidades.md
+
+# Ignorar carpetas clonadas de los microservicios individuales
+ms-rutaexpress-bff/
+ms-rutaexpress-envios/
+rutaexpress-frontend/
