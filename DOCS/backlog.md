@@ -375,3 +375,15 @@ Despliegue de la arquitectura completa en AWS con instancias EC2 dedicadas y Sec
 - [ ] Instancia `ec2-mq`: clúster RabbitMQ con `infra/mq/compose.yml`.
 - [ ] Instancia `ec2-kafka`: Zookeeper, Kafka y Kafka UI con `infra/kafka/compose.yml`.
 - [ ] Security Groups configurados para aislar la comunicación interna entre brokers y aplicaciones.
+
+---
+**Title:** [TechDebt] Estandarizar nombres de endpoints y recursos al español
+**Labels:** task
+**Size:** S
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+Revisar y refactorizar los endpoints del BFF y futuros microservicios para asegurar que sigan el estándar en español (ej: /api/publico/salud, /api/administrador/panel, etc.).
+
+**Criterios de Aceptación:**
+- [ ] Refactorizar endpoints de prueba en ms-rutaexpress-bff a español.
+- [ ] Asegurar que las rutas de negocio usen sustantivos en español (ej. /api/envios).

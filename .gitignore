@@ -27,3 +27,5 @@ build/
 
 # Agent configurations
 .agents/
+
+DOCS/responsabilidades.md
