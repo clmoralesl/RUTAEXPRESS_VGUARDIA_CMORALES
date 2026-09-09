@@ -6,7 +6,7 @@ Aquí se centralizan los **Issues del proyecto**, la documentación técnica, la
 
 ---
 
-## 🔗 Repositorios del Sistema (Arquitectura Polirepo)
+## Repositorios del Sistema (Arquitectura Polirepo)
 
 El código fuente del sistema está distribuido en repositorios independientes por microservicio/componente:
 
