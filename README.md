@@ -18,14 +18,3 @@ El código fuente del sistema está distribuido en repositorios independientes p
 | **Hub Documentación** |  [RUTAEXPRESS_VGUARDIA_CMORALES](https://github.com/clmoralesl/RUTAEXPRESS_VGUARDIA_CMORALES) | Repositorio Central de Tareas y Documentación |
 
 ---
-
-## Estructura del Repositorio de Documentación
-
-- **`DOCS/backlog.md`**: Backlog maestro completo con los Issues del proyecto.
-- **`DOCS/responsabilidades.md`**: Matriz de asignación de tareas.
-
----
-
-## Variables de Entorno
-
-Cada microservicio mantiene su propio archivo `.env` o `.env.example` en su respectivo repositorio adaptado a sus requerimientos específicos de infraestructura y bases de datos.
