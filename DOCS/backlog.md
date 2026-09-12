@@ -2,15 +2,16 @@
 
 Este documento contiene el backlog del proyecto desglosado en tareas modulares, estructuradas por Sprints para cubrir el 100% de la pauta de evaluación.
 El formato utilizado permite la sincronización automática con GitHub Issues (separando cada Issue con `---`).
+Todas las API, endpoints, nombres de repositorios y esquemas de base de datos están estrictamente estandarizados en **español**.
 
 ---
 ## Resumen de Sprints y Cobertura
-- **Sprint 1 - Evaluación Parcial 1 (16 Issues):** Autenticación Azure AD (MSAL), BFF Spring Boot con RBAC, Microservicio Shipments con BD Cloud, Contenedores Docker, Despliegue en AWS EC2, Protección perimetral con AWS API Gateway (JWT Authorizer) y Vistas funcionales en Angular.
-- **Sprint 2 - Asincronía, Analítica e Infraestructura Avanzada (10 Issues):** Clúster RabbitMQ con DLQ, Clúster Kafka y Zookeeper, Microservicios de Catálogo, Notificaciones, Auditoría y Reportes (KPIs), Dashboard en Frontend y Despliegue multi-EC2 en AWS.
+- **Sprint 1 - Evaluación Parcial 1 (18 Issues):** Autenticación Azure AD (MSAL), BFF Spring Boot con RBAC, Aprovisionamiento de BD Oracle Cloud (Multi-Schema), Microservicio de Envíos (`ms-rutaexpress-envios`), Contenedores Docker, Despliegue en AWS EC2, Protección perimetral con AWS API Gateway (JWT Authorizer) y Vistas funcionales en Angular.
+- **Sprint 2 - Asincronía, Analítica e Infraestructura Avanzada (10 Issues):** Clúster RabbitMQ con DLQ, Clúster Kafka y Zookeeper, Microservicios de Catálogo (`ms-rutaexpress-catalogo`), Notificaciones (`ms-rutaexpress-notificaciones`), Auditoría (`ms-rutaexpress-auditoria`) y Reportes (`ms-rutaexpress-reportes`), Dashboard en Frontend y Despliegue multi-EC2 en AWS.
 
 ---
 
-## Sprint 1 - Evaluación Parcial 1 (Seguridad, BFF, EC2, API Gateway y CRUD Envíos)
+## Sprint 1 - Evaluación Parcial 1 (Seguridad, BFF, BD Oracle Cloud, EC2, API Gateway y CRUD Envíos)
 *Objetivo: Cumplir con el 100% de la pauta de evaluación N°1, logrando un flujo de autenticación seguro de extremo a extremo y pantallas funcionales conectadas a la nube.*
 
 ---
@@ -37,10 +38,10 @@ Configurar el entorno de identidad (IDaaS) en Azure Active Directory / Microsoft
 Crear el microservicio Backend For Frontend (BFF) en Spring Boot que actúa como punto de entrada de la aplicación, configurado como Resource Server OAuth2 para validar tokens JWT emitidos por Azure AD (Entra ID).
 
 **Criterios de Aceptación:**
-- [ ] Proyecto Spring Boot 3.x inicializado con Java 17 en `BACKEND/ms-rutaexpress-bff`.
-- [ ] Se valida que el token recibido pertenezca al `issuer-uri` y `jwk-set-uri` de Azure AD.
-- [ ] Retorna HTTP 401 si se intenta consumir un endpoint protegido sin token o con token inválido.
-- [ ] Expone endpoint de salud público `/actuator/health` o `/api/public/health` con HTTP 200.
+- [x] Proyecto Spring Boot 3.x inicializado con Java 17 en el repositorio `ms-rutaexpress-bff`.
+- [x] Se valida que el token recibido pertenezca al `issuer-uri` y `jwk-set-uri` de Azure AD.
+- [x] Retorna HTTP 401 si se intenta consumir un endpoint protegido sin token o con token inválido.
+- [x] Expone endpoint de salud público `/api/publico/estado` con HTTP 200.
 
 ---
 **Title:** [Backend] Configurar extracción de Roles y RBAC en ms-rutaexpress-bff
@@ -52,51 +53,67 @@ Crear el microservicio Backend For Frontend (BFF) en Spring Boot que actúa como
 Parsear los claims del token JWT de Azure AD para manejar autorización basada en roles (RBAC) en el BFF.
 
 **Criterios de Aceptación:**
-- [ ] El `JwtAuthenticationConverter` extrae los roles y claims del token (`roles` o `groups`) mapeándolos a `ROLE_ADMIN`, `ROLE_DESPACHADOR`, `ROLE_CLIENTE`.
-- [ ] Endpoint de prueba (ej. `/api/test-admin`) retorna HTTP 403 Forbidden si el rol no coincide.
-- [ ] Respuestas de error 401 y 403 debidamente formateadas en JSON con código y mensaje estándar.
+- [x] El `JwtAuthenticationConverter` extrae los roles y claims del token (`roles` o `groups`) mapeándolos a `ROLE_ADMIN`, `ROLE_DESPACHADOR`, `ROLE_CLIENTE`.
+- [x] Endpoint de prueba (`/api/administrador/dashboard`) retorna HTTP 403 Forbidden si el rol no coincide.
+- [x] Respuestas de error 401 y 403 debidamente formateadas en JSON con código y mensaje estándar.
 
 ---
-**Title:** [Backend] Inicializar ms-rutaexpress-shipments y conexión a BD Cloud
+**Title:** [Infra/DB] Aprovisionar Oracle Cloud Database y Esquemas por Microservicio
+**Labels:** database, infra, devops
+**Size:** M
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+Aprovisionar la instancia de base de datos en Oracle Cloud (Autonomous Database / OCI) bajo la estrategia **Database-per-Service** utilizando múltiples esquemas (usuarios Oracle) aislados dentro de la misma instancia.
+
+**Criterios de Aceptación:**
+- [x] Instancia Oracle Cloud Autonomous DB provisionada y accesible.
+- [x] Esquema/Usuario `USER_ENVIOS` creado con privilegios para el microservicio de envíos.
+- [x] Esquemas preparados para futuros microservicios (`USER_CATALOGO`, `USER_AUDITORIA`).
+- [x] Scripts `schema.sql` (tablas e índices de envíos) y `data.sql` (datos dummy iniciales: 5 a 10 envíos de prueba).
+- [x] Credenciales y archivo Wallet de conexión documentados de forma segura en `.env.example`.
+
+---
+**Title:** [Backend] Inicializar ms-rutaexpress-envios y conexión a BD Oracle
 **Labels:** backend, database, task
 **Size:** M
 **Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-Crear el microservicio de negocio para el ciclo de vida de los envíos con persistencia en Base de Datos Cloud (Oracle Cloud / RDS).
+*Depende de: [Infra/DB] Aprovisionar Oracle Cloud Database*
+Crear el microservicio de negocio para el ciclo de vida de los envíos en el repositorio `ms-rutaexpress-envios`, configurando la persistencia JPA/Hibernate hacia el esquema `USER_ENVIOS` en Oracle Cloud.
 
 **Criterios de Aceptación:**
-- [ ] Proyecto Spring Boot 3.x inicializado en `BACKEND/ms-rutaexpress-shipments`.
-- [ ] Conexión exitosa a la base de datos cloud configurada mediante JPA/Hibernate.
-- [ ] Entidad `Shipment` y repositorio `ShipmentRepository` implementados correctamente.
-- [ ] Scripts o migraciones iniciales para estructura de tablas.
+- [ ] Proyecto Spring Boot 3.x inicializado en el repositorio `ms-rutaexpress-envios`.
+- [ ] Conexión exitosa al esquema `USER_ENVIOS` en Oracle Cloud configurada mediante JPA/Hibernate y driver de Oracle.
+- [ ] Entidad `Envio` y repositorio `EnvioRepository` implementados correctamente.
+- [ ] Verificación de lectura de datos dummy iniciales desde el esquema Oracle.
 
 ---
-**Title:** [Backend] CRUD Básico y Validación de Máquina de Estados en ms-rutaexpress-shipments
+**Title:** [Backend] Gestión y Validación de Máquina de Estados en ms-rutaexpress-envios
 **Labels:** backend, feature
 **Size:** M
 **Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-*Depende de: [Backend] Inicializar ms-rutaexpress-shipments*
-Habilitar las operaciones de creación, consulta y transición de estados del ciclo de vida de envíos.
+*Depende de: [Backend] Inicializar ms-rutaexpress-envios*
+Habilitar las operaciones de creación, consulta y transición de estados del ciclo de vida de los envíos (sin borrado físico por trazabilidad).
 
 **Criterios de Aceptación:**
-- [ ] `POST /api/shipments` crea un envío en estado "CREADO" y retorna HTTP 201 con ID generado.
-- [ ] `GET /api/shipments/{id}` retorna HTTP 200 con el detalle o HTTP 404 si no existe.
-- [ ] `GET /api/shipments` retorna el listado de envíos con soporte a filtros (estado, fechas).
-- [ ] `PUT /api/shipments/{id}/status` valida la progresión estricta: `CREADO -> ACEPTADO -> EN_BODEGA -> EN_RUTA -> ENTREGADO` (o `CANCELADO`).
+- [ ] `POST /api/envios` crea un envío en estado "CREADO" y retorna HTTP 201 con ID generado.
+- [ ] `GET /api/envios/{id}` retorna HTTP 200 con el detalle o HTTP 404 si no existe.
+- [ ] `GET /api/envios` retorna el listado de envíos con soporte a filtros (estado, rango de fechas).
+- [ ] `PUT /api/envios/{id}/estado` valida la progresión estricta: `CREADO -> ACEPTADO -> EN_BODEGA -> EN_RUTA -> ENTREGADO` (o `CANCELADO`).
 - [ ] Transiciones inválidas son rechazadas con HTTP 400 Bad Request y mensaje descriptivo.
 
 ---
-**Title:** [Backend] Configurar Enrutamiento en ms-rutaexpress-bff hacia ms-rutaexpress-shipments
+**Title:** [Backend] Configurar Enrutamiento en ms-rutaexpress-bff hacia ms-rutaexpress-envios
 **Labels:** backend, feature
 **Size:** M
 **Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-*Depende de: [Backend] Inicializar ms-rutaexpress-bff, [Backend] CRUD Básico ms-rutaexpress-shipments*
-Configurar el BFF para orquestar y reenviar peticiones autenticadas y autorizadas hacia el microservicio `ms-rutaexpress-shipments`.
+*Depende de: [Backend] Inicializar ms-rutaexpress-bff, [Backend] Gestión y Validación de Máquina de Estados en ms-rutaexpress-envios*
+Configurar el BFF para orquestar y reenviar peticiones autenticadas y autorizadas hacia el microservicio `ms-rutaexpress-envios`.
 
 **Criterios de Aceptación:**
-- [ ] Endpoints `/api/bff/shipments/**` enrutan de forma segura hacia el servicio de envíos.
+- [ ] Endpoints `/api/bff/envios/**` enrutan de forma segura hacia el servicio de envíos.
 - [ ] Propagación de identidad y contexto del usuario autenticado.
 - [ ] Manejo de resiliencia y timeouts en caso de indisponibilidad del servicio de envíos.
 
@@ -110,7 +127,7 @@ Crear las imágenes Docker y la orquestación para levantar los microservicios b
 
 **Criterios de Aceptación:**
 - [ ] `Dockerfile` multi-stage optimizado para `ms-rutaexpress-bff`.
-- [ ] `Dockerfile` multi-stage optimizado para `ms-rutaexpress-shipments`.
+- [ ] `Dockerfile` multi-stage optimizado para `ms-rutaexpress-envios`.
 - [ ] Archivo `infra/apps/compose.yml` que levanta ambos servicios en una red común pasando variables de entorno.
 - [ ] Verificación local de que los contenedores levantan y comunican sin errores.
 
@@ -126,7 +143,7 @@ Aprovisionar y configurar una instancia AWS EC2 para ejecutar los contenedores d
 **Criterios de Aceptación:**
 - [ ] Instancia EC2 en ejecución con Docker y Docker Compose instalados.
 - [ ] Security Groups configurados para permitir tráfico únicamente desde los puertos autorizados (SSH y puerto HTTP/BFF).
-- [ ] Contenedores de `ms-rutaexpress-bff` y `ms-rutaexpress-shipments` activos y respondiendo correctamente.
+- [ ] Contenedores de `ms-rutaexpress-bff` y `ms-rutaexpress-envios` activos y respondiendo correctamente.
 
 ---
 **Title:** [Infra] Configurar AWS API Gateway (HTTP API + JWT Authorizer Azure AD)
@@ -148,7 +165,7 @@ Configurar la capa perimetral del sistema en AWS API Gateway para proteger el ba
 **Size:** S
 **Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-Crear la aplicación base en Angular en la carpeta `FRONTEND` configurando estándares y buenas prácticas.
+Crear la aplicación base en Angular en el repositorio `rutaexpress-frontend` configurando estándares y buenas prácticas.
 
 **Criterios de Aceptación:**
 - [ ] Proyecto Angular inicializado y compilando correctamente con `ng serve`.
@@ -181,7 +198,7 @@ Configurar la autenticación corporativa con Azure AD mediante `@azure/msal-brow
 **Criterios de Aceptación:**
 - [ ] Botón de "Iniciar sesión con Microsoft" redirige al login oficial de Azure AD.
 - [ ] Tras login exitoso, se obtiene y almacena el `access_token` JWT.
-- [ ] Redirección automática a la vista privada inicial (`/dashboard` o `/shipments`).
+- [ ] Redirección automática a la vista privada inicial (`/panel` o `/envios`).
 
 ---
 **Title:** [Frontend] Implementar Guards e Interceptor MSAL apuntando a AWS API Gateway
@@ -207,7 +224,7 @@ Asegurar las rutas en el frontend y configurar la inyección automática del tok
 Implementar la vista para visualizar y filtrar los envíos consumiendo el backend a través de AWS API Gateway.
 
 **Criterios de Aceptación:**
-- [ ] Tabla interactiva que renderiza el listado de envíos.
+- [ ] Tabla interactiva que renderiza el listado de envíos desde `/api/bff/envios`.
 - [ ] Filtros por estado y rango de fechas.
 - [ ] Estados visuales claros de carga (`loading spinner`), error y lista vacía.
 
@@ -235,10 +252,22 @@ Implementar el formulario para registrar nuevos envíos y los controles para ava
 Validación completa del flujo integrado según la rúbrica de la Evaluación Parcial 1.
 
 **Criterios de Aceptación:**
-- [ ] Flujo E2E verificado: Angular (MSAL) -> AWS API Gateway (JWT Authorizer) -> EC2 (ms-rutaexpress-bff) -> ms-rutaexpress-shipments -> BD Cloud.
+- [ ] Flujo E2E verificado: Angular (MSAL) -> AWS API Gateway (JWT Authorizer) -> EC2 (ms-rutaexpress-bff) -> ms-rutaexpress-envios -> Oracle Cloud DB (`USER_ENVIOS`).
 - [ ] Verificación de rechazo 401 en Gateway sin token o con token inválido.
 - [ ] Verificación de rechazo 403 en BFF si el rol no tiene permiso asignado.
 - [ ] Documentación del flujo de pruebas y capturas de evidencia listas para la entrega.
+
+---
+**Title:** [TechDebt] Estandarizar nombres de endpoints y recursos al español
+**Labels:** task
+**Size:** S
+**Milestone:** Sprint 1 - Evaluación Parcial 1
+**Body:**
+Revisar y refactorizar los endpoints del BFF y futuros microservicios para asegurar que sigan el estándar en español (ej: `/api/publico/estado`, `/api/administrador/dashboard`, `/api/envios`).
+
+**Criterios de Aceptación:**
+- [x] Refactorizar endpoints de prueba en `ms-rutaexpress-bff` a español.
+- [x] Asegurar que las rutas de negocio usen sustantivos en español (ej. `/api/envios`).
 
 
 ---
@@ -255,7 +284,7 @@ Crear la infraestructura contenerizada para RabbitMQ en alta disponibilidad con 
 
 **Criterios de Aceptación:**
 - [ ] Archivo `infra/mq/compose.yml` levanta RabbitMQ accesible en puerto 5672 y UI en 15672.
-- [ ] Configuración inicial de exchanges (`cmd.direct`, `cmd.topic`, `cmd.dead.dlx`) y colas con DLQ.
+- [ ] Configuración inicial de exchanges (`cmd.direct`, `cmd.topic`, `cmd.dead.dlx`) y colas con DLQ (`q.cmd.correo`).
 - [ ] Persistencia de datos configurada mediante volúmenes.
 
 ---
@@ -269,23 +298,23 @@ Crear la infraestructura contenerizada para Kafka, Zookeeper y Kafka UI.
 **Criterios de Aceptación:**
 - [ ] Archivo `infra/kafka/compose.yml` levanta Zookeeper y Kafka en el puerto 9092.
 - [ ] Kafka UI disponible y accesible para inspección de tópicos.
-- [ ] Tópico `shipments.events` inicializado con factor de particionamiento adecuado.
+- [ ] Tópico `envios.eventos` inicializado con factor de particionamiento adecuado.
 
 ---
-**Title:** [Backend] Inicializar ms-rutaexpress-catalog (Catálogo y Capacidad de Flota)
+**Title:** [Backend] Inicializar ms-rutaexpress-catalogo (Catálogo y Capacidad de Flota)
 **Labels:** backend, feature
 **Size:** M
 **Milestone:** Sprint 2 - Asincronía y Analítica
 **Body:**
-Microservicio para administrar tipos de servicio de couriers y controlar la capacidad disponible de la flota.
+Microservicio para administrar tipos de servicio de couriers y controlar la capacidad disponible de la flota con esquema `USER_CATALOGO` en Oracle Cloud.
 
 **Criterios de Aceptación:**
-- [ ] Conexión a Base de Datos Cloud y entidad `CatalogService`.
-- [ ] Endpoints CRUD para administrar servicios (`GET /api/catalog/services`, `POST`).
-- [ ] `PUT /api/catalog/services/{id}` para reducción atómica de capacidad al aceptar un envío.
+- [ ] Conexión a esquema `USER_CATALOGO` en Oracle Cloud BD y entidad `ServicioCatalogo`.
+- [ ] Endpoints CRUD para administrar servicios (`GET /api/catalogo/servicios`, `POST /api/catalogo/servicios`).
+- [ ] `PUT /api/catalogo/servicios/{id}` para reducción atómica de capacidad al aceptar un envío.
 
 ---
-**Title:** [Backend] Configurar Publicador RabbitMQ en ms-rutaexpress-shipments
+**Title:** [Backend] Configurar Publicador RabbitMQ en ms-rutaexpress-envios
 **Labels:** backend, devops
 **Size:** S
 **Milestone:** Sprint 2 - Asincronía y Analítica
@@ -293,12 +322,12 @@ Microservicio para administrar tipos de servicio de couriers y controlar la capa
 Integrar el envío asíncrono de eventos desde el microservicio de envíos hacia RabbitMQ.
 
 **Criterios de Aceptación:**
-- [ ] Al cambiar el estado de un envío (ej. "ACEPTADO"), publica mensaje a la cola correspondiente.
-- [ ] Mensaje formateado bajo envelope común (`type`, `eventId`, `timestamp`, `traceId`, `correlationId`).
+- [ ] Al cambiar el estado de un envío (ej. "ACEPTADO"), publica mensaje a la cola correspondiente (`q.cmd.correo`).
+- [ ] Mensaje formateado bajo envelope común (`tipo`, `eventoId`, `timestamp`, `traceId`, `correlationId`).
 - [ ] Resiliencia: si RabbitMQ no está disponible, no se bloquea la transacción principal.
 
 ---
-**Title:** [Backend] Crear microservicio ms-rutaexpress-notify (Consumidor RabbitMQ y DLQ)
+**Title:** [Backend] Crear microservicio ms-rutaexpress-notificaciones (Consumidor RabbitMQ y DLQ)
 **Labels:** backend, feature
 **Size:** M
 **Milestone:** Sprint 2 - Asincronía y Analítica
@@ -306,12 +335,12 @@ Integrar el envío asíncrono de eventos desde el microservicio de envíos hacia
 Consumidor asíncrono para notificaciones al destinatario y tickets de picking para bodega.
 
 **Criterios de Aceptación:**
-- [ ] Servicio consume mensajes desde la cola `q.cmd.email`.
+- [ ] Servicio consume mensajes desde la cola `q.cmd.correo`.
 - [ ] Simulación de envío y logging de eventos.
-- [ ] Mensajes fallidos son reenviados a la cola muerta (`q.cmd.email.dlq`) tras reintentos agotados.
+- [ ] Mensajes fallidos son reenviados a la cola muerta (`q.cmd.correo.dlq`) tras reintentos agotados.
 
 ---
-**Title:** [Backend] Configurar Productor Kafka en ms-rutaexpress-shipments (Eventos Logísticos)
+**Title:** [Backend] Configurar Productor Kafka en ms-rutaexpress-envios (Eventos Logísticos)
 **Labels:** backend, devops
 **Size:** S
 **Milestone:** Sprint 2 - Asincronía y Analítica
@@ -319,25 +348,25 @@ Consumidor asíncrono para notificaciones al destinatario y tickets de picking p
 Publicar eventos inmutables de trazabilidad logística en tiempo real hacia Kafka.
 
 **Criterios de Aceptación:**
-- [ ] Productor Kafka configurado en `ms-rutaexpress-shipments`.
-- [ ] Publica eventos logísticos al tópico `shipments.events` en cada cambio de estado.
-- [ ] Serialización JSON y clave de partición basada en `shipmentId`.
+- [ ] Productor Kafka configurado en `ms-rutaexpress-envios`.
+- [ ] Publica eventos logísticos al tópico `envios.eventos` en cada cambio de estado.
+- [ ] Serialización JSON y clave de partición basada en `envioId`.
 
 ---
-**Title:** [Backend] Crear microservicio ms-rutaexpress-audit (Consumidor Kafka e Historial Inmutable)
+**Title:** [Backend] Crear microservicio ms-rutaexpress-auditoria (Consumidor Kafka e Historial Inmutable)
 **Labels:** backend, feature
 **Size:** M
 **Milestone:** Sprint 2 - Asincronía y Analítica
 **Body:**
-Microservicio para persistir el timeline de trazabilidad y auditoría logística de forma desacoplada.
+Microservicio para persistir el timeline de trazabilidad y auditoría logística de forma desacoplada en el esquema `USER_AUDITORIA` de Oracle Cloud.
 
 **Criterios de Aceptación:**
-- [ ] Consumidor Kafka suscrito al tópico `shipments.events`.
-- [ ] Registros insertados de forma inmutable en Base de Datos Cloud.
-- [ ] Endpoint `GET /api/audit/shipments/{id}` para consultar historial de eventos.
+- [ ] Consumidor Kafka suscrito al tópico `envios.eventos`.
+- [ ] Registros insertados de forma inmutable en el esquema `USER_AUDITORIA` de Oracle Cloud BD.
+- [ ] Endpoint `GET /api/auditoria/envios/{id}` para consultar historial de eventos.
 
 ---
-**Title:** [Backend] Crear microservicio ms-rutaexpress-report (Consumidor Kafka y KPIs en tiempo real)
+**Title:** [Backend] Crear microservicio ms-rutaexpress-reportes (Consumidor Kafka y KPIs en tiempo real)
 **Labels:** backend, feature
 **Size:** M
 **Milestone:** Sprint 2 - Asincronía y Analítica
@@ -346,8 +375,8 @@ Microservicio para procesamiento analítico de métricas operacionales.
 
 **Criterios de Aceptación:**
 - [ ] Consumo de eventos desde Kafka y cálculo de métricas agregadas en memoria o base de datos.
-- [ ] Endpoint `GET /api/report/kpis?range=last24h` (envíos/hora, lead time, estados activos).
-- [ ] Endpoint `GET /api/report/top-services?range=last7d`.
+- [ ] Endpoint `GET /api/reportes/kpis?rango=ultimas24h` (envíos/hora, lead time, estados activos).
+- [ ] Endpoint `GET /api/reportes/top-servicios?rango=ultimos7dias`.
 
 ---
 **Title:** [Frontend] Dashboard de Operaciones y Métricas en Tiempo Real
@@ -360,7 +389,7 @@ Vista en Angular para visualizar el panel de métricas y KPIs operacionales en t
 **Criterios de Aceptación:**
 - [ ] Pantalla de Dashboard con tarjetas de KPIs (envíos activos, tiempos de entrega).
 - [ ] Gráficos interactivos de volumen y servicios principales.
-- [ ] Conexión segura hacia el BFF / API Gateway.
+- [ ] Conexión segura hacia el BFF / API Gateway (`/api/bff/reportes/...`).
 
 ---
 **Title:** [Infra] Despliegue Multi-Instancia en AWS (EC2 Apps, EC2 MQ, EC2 Kafka)
@@ -375,15 +404,3 @@ Despliegue de la arquitectura completa en AWS con instancias EC2 dedicadas y Sec
 - [ ] Instancia `ec2-mq`: clúster RabbitMQ con `infra/mq/compose.yml`.
 - [ ] Instancia `ec2-kafka`: Zookeeper, Kafka y Kafka UI con `infra/kafka/compose.yml`.
 - [ ] Security Groups configurados para aislar la comunicación interna entre brokers y aplicaciones.
-
----
-**Title:** [TechDebt] Estandarizar nombres de endpoints y recursos al español
-**Labels:** task
-**Size:** S
-**Milestone:** Sprint 1 - Evaluación Parcial 1
-**Body:**
-Revisar y refactorizar los endpoints del BFF y futuros microservicios para asegurar que sigan el estándar en español (ej: /api/publico/salud, /api/administrador/panel, etc.).
-
-**Criterios de Aceptación:**
-- [ ] Refactorizar endpoints de prueba en ms-rutaexpress-bff a español.
-- [ ] Asegurar que las rutas de negocio usen sustantivos en español (ej. /api/envios).
