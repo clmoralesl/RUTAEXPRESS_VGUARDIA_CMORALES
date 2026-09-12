@@ -2,6 +2,14 @@
 .env
 *.env
 
+# Oracle Cloud Wallet & Security Credentials
+Wallet_*.zip
+*.sso
+*.p12
+*.jks
+tnsnames.ora
+sqlnet.ora
+
 # IDEs & Editors
 .vscode/
 .idea/
@@ -28,7 +36,10 @@ build/
 # Agent configurations
 .agents/
 
+# Documentos locales de seguimiento y guías internas
 DOCS/responsabilidades.md
+DOCS/estado_actual.md
+DOCS/guias/
 
 # Ignorar carpetas clonadas de los microservicios individuales
 ms-rutaexpress-bff/
