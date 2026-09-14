@@ -1,0 +1,68 @@
+name: Deploy to EKS
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 526905849168.dkr.ecr.us-east-1.amazonaws.com
+  EKS_CLUSTER_NAME: rutaexpress-cluster
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # ==========================================================================
+    # CONFIGURACIÓN DE CREDENCIALES AWS
+    # Debes crear estos secretos en Settings -> Secrets and variables -> Actions
+    # ==========================================================================
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} # Crítico para Learner Lab
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    # ==========================================================================
+    # CONSTRUCCIÓN Y PUSH DE IMÁGENES
+    # Asume que los repositorios de ms-rutaexpress-bff, etc., están clonados 
+    # como submódulos o están en la misma carpeta raíz (monorepo). Si están
+    # en otros repos, se tendrían que clonar aquí.
+    # ==========================================================================
+    - name: Build, tag, and push images to ECR
+      run: |
+        # BFF
+        docker build -t $ECR_REGISTRY/rutaexpress-bff:latest ms-rutaexpress-bff/
+        docker push $ECR_REGISTRY/rutaexpress-bff:latest
+        
+        # Envios
+        docker build -t $ECR_REGISTRY/rutaexpress-envios:latest ms-rutaexpress-envios/
+        docker push $ECR_REGISTRY/rutaexpress-envios:latest
+        
+        # Frontend
+        docker build -t $ECR_REGISTRY/rutaexpress-frontend:latest rutaexpress-frontend/
+        docker push $ECR_REGISTRY/rutaexpress-frontend:latest
+
+    # ==========================================================================
+    # DESPLIEGUE EN KUBERNETES (EKS)
+    # ==========================================================================
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+
+    - name: Deploy to EKS
+      run: |
+        kubectl apply -f infra/k8s/
+        # Forzar el reinicio de los deployments para tomar las imágenes 'latest' recién subidas
+        kubectl rollout restart deployment/ms-rutaexpress-bff
+        kubectl rollout restart deployment/ms-rutaexpress-envios
+        kubectl rollout restart deployment/rutaexpress-frontend

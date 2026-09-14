@@ -41,6 +41,15 @@ DOCS/responsabilidades.md
 DOCS/estado_actual.md
 DOCS/guias/
 
+# Secretos de AWS y credenciales temporales
+infra/update_aws_credentials.ps1
+infra/k8s/01-secrets.yaml
+
+# Archivos de estado y cachés de Terraform
+**/infra/terraform/.terraform/
+**/infra/terraform/*.tfstate
+**/infra/terraform/*.tfstate.backup
+
 # Ignorar carpetas clonadas de los microservicios individuales
 ms-rutaexpress-bff/
 ms-rutaexpress-envios/

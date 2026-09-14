@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rutaexpress-frontend
+  labels:
+    app: rutaexpress-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rutaexpress-frontend
+  template:
+    metadata:
+      labels:
+        app: rutaexpress-frontend
+    spec:
+      containers:
+      - name: frontend
+        # Reemplazar la URL del registro con tu ECR
+        image: 526905849168.dkr.ecr.us-east-1.amazonaws.com/rutaexpress-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rutaexpress-frontend
+  labels:
+    app: rutaexpress-frontend
+spec:
+  type: LoadBalancer # Expone el frontend hacia internet a través de un LoadBalancer de AWS
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: rutaexpress-frontend
