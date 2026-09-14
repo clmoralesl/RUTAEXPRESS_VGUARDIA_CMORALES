@@ -1,0 +1,63 @@
+# ==============================================================================
+# Orquestacion de Microservicios y Frontend - Ecosistema RutaExpress
+# ==============================================================================
+services:
+
+  # ----------------------------------------------------------------------------
+  # Backend For Frontend (BFF) - Resource Server OAuth2 / Azure AD
+  # ----------------------------------------------------------------------------
+  ms-rutaexpress-bff:
+    build:
+      context: ../../ms-rutaexpress-bff
+      dockerfile: Dockerfile
+    container_name: ms-rutaexpress-bff
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../../.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - rutaexpress-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Frontend Angular 20 (Servido mediante Nginx con Reverse Proxy)
+  # ----------------------------------------------------------------------------
+  rutaexpress-frontend:
+    build:
+      context: ../../rutaexpress-frontend
+      dockerfile: Dockerfile
+    container_name: rutaexpress-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - ms-rutaexpress-bff
+    networks:
+      - rutaexpress-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Microservicio de Gestion de Envios
+  # ----------------------------------------------------------------------------
+  ms-rutaexpress-envios:
+    build:
+      context: ../../ms-rutaexpress-envios
+      dockerfile: Dockerfile
+    container_name: ms-rutaexpress-envios
+    ports:
+      - "8081:8081"
+    env_file:
+      - ../../.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SERVER_PORT=8081
+    volumes:
+      - ../oracle/wallet:/opt/oracle/wallet:ro
+    networks:
+      - rutaexpress-network
+    restart: unless-stopped
+
+networks:
+  rutaexpress-network:
+    driver: bridge

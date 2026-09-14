@@ -1,4 +1,4 @@
-# Backlog RutaExpress - Desglose de Tareas
+﻿# Backlog RutaExpress - Desglose de Tareas
 
 Este documento contiene el backlog del proyecto desglosado en tareas modulares, estructuradas por Sprints para cubrir el 100% de la pauta de evaluación.
 El formato utilizado permite la sincronización automática con GitHub Issues (separando cada Issue con `---`).
@@ -118,17 +118,18 @@ Configurar el BFF para orquestar y reenviar peticiones autenticadas y autorizada
 - [ ] Manejo de resiliencia y timeouts en caso de indisponibilidad del servicio de envíos.
 
 ---
-**Title:** [DevOps] Dockerizar microservicios (Dockerfile y compose.yml de apps)
+**Title:** [DevOps] Dockerizar microservicios y frontend (Dockerfile y compose.yml de apps)
 **Labels:** devops, task
 **Size:** M
 **Milestone:** Sprint 1 - Evaluación Parcial 1
 **Body:**
-Crear las imágenes Docker y la orquestación para levantar los microservicios backend de forma contenerizada.
+Crear las imágenes Docker y la orquestación para levantar los microservicios backend y el frontend de forma contenerizada.
 
 **Criterios de Aceptación:**
 - [ ] `Dockerfile` multi-stage optimizado para `ms-rutaexpress-bff`.
 - [ ] `Dockerfile` multi-stage optimizado para `ms-rutaexpress-envios`.
-- [ ] Archivo `infra/apps/compose.yml` que levanta ambos servicios en una red común pasando variables de entorno.
+- [ ] `Dockerfile` multi-stage (Node + Nginx) para el frontend `rutaexpress-frontend`.
+- [ ] Archivo `infra/apps/compose.yml` que levanta los servicios backend y el frontend en una red común.
 - [ ] Verificación local de que los contenedores levantan y comunican sin errores.
 
 ---
