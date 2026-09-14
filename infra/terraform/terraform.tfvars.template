@@ -1,0 +1,6 @@
+# Archivo de variables de plantilla para Terraform
+# Cópialo como terraform.tfvars y reemplaza los valores reales. No subas terraform.tfvars al repositorio.
+
+azure_ad_tenant_id = "<TU_TENANT_ID_AQUI>"
+azure_ad_client_id = "<TU_BACKEND_CLIENT_ID_AQUI>"
+bff_lb_url         = "<DNS_DEL_LOAD_BALANCER_DEL_BFF>"

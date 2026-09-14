@@ -34,3 +34,24 @@ variable "eks_node_role_name" {
   type        = string
   default     = "c224313a5663957l16144452t1w526905849-LabEksNodeRole-55SJscuAIZVu"
 }
+
+# ==============================================================================
+# VARIABLES API GATEWAY & AZURE AD
+# ==============================================================================
+
+variable "azure_ad_tenant_id" {
+  description = "Tenant ID de Azure AD para el JWT Authorizer"
+  type        = string
+  sensitive   = true
+}
+
+variable "azure_ad_client_id" {
+  description = "Client ID de Azure AD para el JWT Authorizer"
+  type        = string
+  sensitive   = true
+}
+
+variable "bff_lb_url" {
+  description = "URL (DNS) del Network Load Balancer del BFF expuesto por EKS"
+  type        = string
+}

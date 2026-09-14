@@ -32,3 +32,8 @@ output "configure_kubectl" {
   description = "Comando para configurar kubectl"
   value       = "aws eks --region ${var.aws_region} update-kubeconfig --name ${aws_eks_cluster.main.name}"
 }
+
+output "api_gateway_url" {
+  description = "URL de invocación base del AWS API Gateway"
+  value       = aws_apigatewayv2_api.rutaexpress_api.api_endpoint
+}
