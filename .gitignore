@@ -55,3 +55,4 @@ ms-rutaexpress-bff/
 ms-rutaexpress-envios/
 rutaexpress-frontend/
 infra/oracle/wallet/
+terraform.tfvars

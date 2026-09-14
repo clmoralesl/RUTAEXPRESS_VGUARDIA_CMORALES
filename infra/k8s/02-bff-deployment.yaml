@@ -34,8 +34,10 @@ metadata:
   name: ms-rutaexpress-bff
   labels:
     app: ms-rutaexpress-bff
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
-  type: ClusterIP # Servicio interno, no expuesto directamente a internet
+  type: LoadBalancer # Expuesto vía Network Load Balancer para el API Gateway
   ports:
   - port: 8080
     targetPort: 8080
