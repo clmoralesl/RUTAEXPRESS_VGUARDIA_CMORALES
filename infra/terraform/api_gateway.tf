@@ -59,17 +59,47 @@ resource "aws_apigatewayv2_integration" "private_integration" {
 # RUTAS
 # ==============================================================================
 
-# Rutas públicas (Sin JWT)
-resource "aws_apigatewayv2_route" "public_routes" {
+# Rutas públicas (Sin JWT) - Separadas por método
+resource "aws_apigatewayv2_route" "public_routes_get" {
   api_id    = aws_apigatewayv2_api.rutaexpress_api.id
-  route_key = "ANY /api/publico/{proxy+}"
+  route_key = "GET /api/publico/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.public_integration.id}"
 }
 
-# Rutas protegidas (Con JWT)
-resource "aws_apigatewayv2_route" "private_routes" {
+resource "aws_apigatewayv2_route" "public_routes_post" {
+  api_id    = aws_apigatewayv2_api.rutaexpress_api.id
+  route_key = "POST /api/publico/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.public_integration.id}"
+}
+
+# Rutas protegidas (Con JWT) - Se separan los métodos para dejar OPTIONS libre para el CORS automático de AWS
+resource "aws_apigatewayv2_route" "private_routes_get" {
   api_id             = aws_apigatewayv2_api.rutaexpress_api.id
-  route_key          = "ANY /api/{proxy+}"
+  route_key          = "GET /api/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.private_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.azure_ad.id
+}
+
+resource "aws_apigatewayv2_route" "private_routes_post" {
+  api_id             = aws_apigatewayv2_api.rutaexpress_api.id
+  route_key          = "POST /api/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.private_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.azure_ad.id
+}
+
+resource "aws_apigatewayv2_route" "private_routes_put" {
+  api_id             = aws_apigatewayv2_api.rutaexpress_api.id
+  route_key          = "PUT /api/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.private_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.azure_ad.id
+}
+
+resource "aws_apigatewayv2_route" "private_routes_delete" {
+  api_id             = aws_apigatewayv2_api.rutaexpress_api.id
+  route_key          = "DELETE /api/{proxy+}"
   target             = "integrations/${aws_apigatewayv2_integration.private_integration.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.azure_ad.id
