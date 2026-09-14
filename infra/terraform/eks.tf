@@ -21,6 +21,10 @@ resource "aws_eks_cluster" "main" {
     Environment = "dev"
     Project     = "RutaExpress"
   }
+
+  lifecycle {
+    ignore_changes = [version]
+  }
 }
 
 resource "aws_eks_node_group" "general" {
