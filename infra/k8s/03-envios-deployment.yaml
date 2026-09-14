@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-rutaexpress-envios
+  labels:
+    app: ms-rutaexpress-envios
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-rutaexpress-envios
+  template:
+    metadata:
+      labels:
+        app: ms-rutaexpress-envios
+    spec:
+      containers:
+      - name: envios
+        # Reemplazar la URL del registro con tu ECR
+        image: 526905849168.dkr.ecr.us-east-1.amazonaws.com/rutaexpress-envios:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SERVER_PORT
+          value: "8081"
+        envFrom:
+        - configMapRef:
+            name: rutaexpress-config
+        - secretRef:
+            name: rutaexpress-secrets
+        # Montar el secreto del wallet de Oracle
+        volumeMounts:
+        - name: oracle-wallet
+          mountPath: /opt/oracle/wallet
+          readOnly: true
+      volumes:
+      - name: oracle-wallet
+        secret:
+          secretName: oracle-wallet-secret
+          # oracle-wallet-secret debe ser creado manualmente por el usuario en kubectl
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-rutaexpress-envios
+  labels:
+    app: ms-rutaexpress-envios
+spec:
+  type: ClusterIP # Servicio interno
+  ports:
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+  selector:
+    app: ms-rutaexpress-envios

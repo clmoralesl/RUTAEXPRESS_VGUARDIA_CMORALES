@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-rutaexpress-bff
+  labels:
+    app: ms-rutaexpress-bff
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-rutaexpress-bff
+  template:
+    metadata:
+      labels:
+        app: ms-rutaexpress-bff
+    spec:
+      containers:
+      - name: bff
+        # Reemplazar la URL del registro con tu ECR
+        image: 526905849168.dkr.ecr.us-east-1.amazonaws.com/rutaexpress-bff:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: rutaexpress-config
+        - secretRef:
+            name: rutaexpress-secrets
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-rutaexpress-bff
+  labels:
+    app: ms-rutaexpress-bff
+spec:
+  type: ClusterIP # Servicio interno, no expuesto directamente a internet
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: ms-rutaexpress-bff
