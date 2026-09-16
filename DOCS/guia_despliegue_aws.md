@@ -105,12 +105,28 @@ Para que tu orquestador y Git Actions puedan subir contenedores, necesitas hacer
 
 Para evitar agotar el presupuesto o tiempo límite de tu Learner Lab, destruye la infraestructura al terminar tus pruebas.
 
-1. Navega al directorio de Terraform:
+### ⚠️ ¡Paso CRÍTICO para evitar errores de VPC y Subredes!
+Dado que Kubernetes (EKS) crea los Load Balancers de AWS automáticamente cuando aplicas tus manifiestos (ej. el BFF), Terraform no los conoce. Si destruyes Terraform primero, esos Load Balancers quedarán huérfanos bloqueando el borrado de la red. **Siempre debes borrar los recursos de Kubernetes primero:**
+
+1. Asegúrate de estar conectado al clúster:
+   ```bash
+   aws eks --region us-east-1 update-kubeconfig --name rutaexpress-cluster
+   ```
+2. Borra los servicios expuestos para que EKS elimine los Load Balancers:
+   ```bash
+   kubectl delete svc ms-rutaexpress-bff
+   # O simplemente borra todo lo que desplegaste:
+   # kubectl delete -f infra/k8s/
+   ```
+3. Espera un par de minutos a que AWS elimine físicamente los balanceadores.
+
+### Destruir la infraestructura con Terraform
+4. Navega al directorio de Terraform:
    ```bash
    cd infra/terraform
    ```
-2. Ejecuta la destrucción:
+5. Ejecuta la destrucción:
    ```bash
-   terraform destroy
+   terraform destroy -auto-approve
    ```
-*Escribe `yes` para confirmar. Gracias a la bandera `force_delete = true` en ECR, Terraform eliminará la VPC, EKS y los repositorios ECR sin importar si contienen imágenes.*
+*Gracias a la bandera `force_delete = true` en ECR, Terraform eliminará la VPC, EKS y los repositorios ECR de forma limpia y automática.*
