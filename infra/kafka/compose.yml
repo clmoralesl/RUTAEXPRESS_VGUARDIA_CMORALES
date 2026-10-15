@@ -1,0 +1,94 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: rutaexpress-zookeeper
+    hostname: zookeeper
+    restart: unless-stopped
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - rutaexpress-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: rutaexpress-kafka
+    hostname: kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - rutaexpress-net
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: rutaexpress-kafka-ui
+    hostname: kafka-ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    ports:
+      - "8085:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: rutaexpress-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - rutaexpress-net
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: rutaexpress-kafka-init
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/sh"]
+    command:
+      - -c
+      - |
+        echo '[INFO] Esperando que Kafka este disponible en kafka:29092...'
+        until kafka-topics --bootstrap-server kafka:29092 --list > /dev/null 2>&1; do
+          sleep 2
+        done
+        echo '[OK] Kafka listo. Creando topicos requeridos por RutaExpress...'
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic shipments.events --partitions 3 --replication-factor 1 --config retention.ms=604800000
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic audit.timeline --partitions 3 --replication-factor 1 --config cleanup.policy=compact,delete --config retention.ms=2592000000
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic shipments.events.DLT --partitions 3 --replication-factor 1 --config retention.ms=1209600000
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic audit.timeline.DLT --partitions 3 --replication-factor 1 --config retention.ms=1209600000
+        echo '[OK] Topicos aprovisionados exitosamente:'
+        kafka-topics --bootstrap-server kafka:29092 --list
+    networks:
+      - rutaexpress-net
+
+volumes:
+  zookeeper_data:
+    name: rutaexpress_zookeeper_data
+  zookeeper_log:
+    name: rutaexpress_zookeeper_log
+  kafka_data:
+    name: rutaexpress_kafka_data
+
+networks:
+  rutaexpress-net:
+    name: rutaexpress-net
+    external: true
