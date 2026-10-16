@@ -58,6 +58,27 @@ services:
       - rutaexpress-network
     restart: unless-stopped
 
+  # ----------------------------------------------------------------------------
+  # Microservicio de Catalogo de Servicios y Flota
+  # ----------------------------------------------------------------------------
+  ms-rutaexpress-catalogo:
+    build:
+      context: ../../ms-rutaexpress-catalogo
+      dockerfile: Dockerfile
+    container_name: ms-rutaexpress-catalogo
+    ports:
+      - "8082:8082"
+    env_file:
+      - ../../.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SERVER_PORT=8082
+    volumes:
+      - ../oracle/wallet:/opt/oracle/wallet:ro
+    networks:
+      - rutaexpress-network
+    restart: unless-stopped
+
 networks:
   rutaexpress-network:
     driver: bridge
