@@ -14,6 +14,7 @@ El código fuente del sistema está distribuido en repositorios independientes p
 | :--- | :--- | :--- |
 | **BFF (Backend For Frontend)** |  [ms-rutaexpress-bff](https://github.com/clmoralesl/ms-rutaexpress-bff) | Resource Server OAuth2 / RBAC en Spring Boot 3 |
 | **Microservicio Envíos** |  [ms-rutaexpress-envios](https://github.com/clmoralesl/ms-rutaexpress-envios) | Servicio de Dominio para el ciclo de vida de envíos |
+| **Microservicio Catálogo** |  [ms-rutaexpress-catalogo](https://github.com/clmoralesl/ms-rutaexpress-catalogo) | Servicio de Dominio para tarifas y control atómico de capacidad vehicular |
 | **Frontend Web** |  [rutaexpress-frontend](https://github.com/clmoralesl/rutaexpress-frontend) | Aplicación Web en Angular con MSAL |
 | **Hub Documentación** |  [RUTAEXPRESS_VGUARDIA_CMORALES](https://github.com/clmoralesl/RUTAEXPRESS_VGUARDIA_CMORALES) | Repositorio Central de Tareas y Documentación |
 
