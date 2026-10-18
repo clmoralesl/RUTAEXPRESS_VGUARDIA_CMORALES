@@ -77,6 +77,67 @@ services:
       - ../oracle/wallet:/opt/oracle/wallet:ro
     networks:
       - rutaexpress-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Microservicio de Notificaciones y Tickets Bodega (Consumidor RabbitMQ)
+  # ----------------------------------------------------------------------------
+  ms-rutaexpress-notificaciones:
+    build:
+      context: ../../ms-rutaexpress-notificaciones
+      dockerfile: Dockerfile
+    container_name: ms-rutaexpress-notificaciones
+    ports:
+      - "8083:8083"
+    env_file:
+      - ../../.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SERVER_PORT=8083
+    networks:
+      - rutaexpress-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Microservicio de Auditoria (Consumidor Kafka, Timeline Inmutable)
+  # ----------------------------------------------------------------------------
+  ms-rutaexpress-auditoria:
+    build:
+      context: ../../ms-rutaexpress-auditoria
+      dockerfile: Dockerfile
+    container_name: ms-rutaexpress-auditoria
+    ports:
+      - "8084:8084"
+    env_file:
+      - ../../.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SERVER_PORT=8084
+    volumes:
+      - ../oracle/wallet:/opt/oracle/wallet:ro
+    networks:
+      - rutaexpress-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Microservicio de Reportes y KPIs (Consumidor Kafka y Motor Analitico)
+  # ----------------------------------------------------------------------------
+  ms-rutaexpress-reportes:
+    build:
+      context: ../../ms-rutaexpress-reportes
+      dockerfile: Dockerfile
+    container_name: ms-rutaexpress-reportes
+    ports:
+      - "8086:8086"
+    env_file:
+      - ../../.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SERVER_PORT=8086
+    networks:
+      - rutaexpress-network
+    restart: unless-stopped
+
   # ----------------------------------------------------------------------------
   # Proxy Inverso Nginx con HTTPS (Fachada Same-Origin y Contexto Seguro MSAL)
   # ----------------------------------------------------------------------------
