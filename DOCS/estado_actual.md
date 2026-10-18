@@ -76,25 +76,60 @@
   - 11 pruebas automatizadas en verde (unitarias, MockMvc e integracion E2E contra cluster real Kafka `localhost:9092`).
   - Rama `feat/inicializar-ms-rutaexpress-auditoria-issue-23` subida y lista para PR.
 
+- **Issue #24: [Backend] Inicializar ms-rutaexpress-reportes (Consumidor Kafka y Motor Analitico)**
+  - Microservicio Spring Boot 3.3.5 / Java 17 en puerto 8086 (`clmoralesl/ms-rutaexpress-reportes`).
+  - Consumidor `@KafkaListener(topics = "shipments.events", groupId = "reportes-group")`.
+  - Entidad analitica `RegistroAnaliticoEnvio` con calculo de `leadTimeHoras`.
+  - Consultas analiticas agregadas en repositorio para KPIs, distribucion de estados, Lead Time y rankings.
+  - Endpoints: `GET /api/reportes/kpis`, `GET /api/reportes/top-servicios`, `GET /api/reportes/rendimiento-couriers`, `GET /api/publico/salud`.
+  - 11 pruebas automatizadas en verde (unitarias, controllers e integracion E2E contra cluster real Kafka `localhost:9092`).
+  - Rama `feat/inicializar-ms-rutaexpress-reportes-issue-24` subida y lista para PR.
+
+- **Issue #35: [Backend] Orquestacion y Agregacion en ms-rutaexpress-bff**
+  - Implementado en `clmoralesl/ms-rutaexpress-bff` (puerto 8080).
+  - Proxy centralizado `BffProxyService` con propagacion automatica de Token JWT (Token Relay) y query parameters.
+  - Manejo de fallback estandarizado en formato JSON (`ErrorRespuestaBff`, HTTP 503) ante fallos downstream (`ResourceAccessException`).
+  - Controladores con seguridad declarativa RBAC (`@PreAuthorize`):
+    - `CatalogoBffController`: `/api/bff/catalogo/**` hacia `ms-rutaexpress-catalogo` (8082).
+    - `AuditoriaBffController`: `/api/bff/auditoria/**` hacia `ms-rutaexpress-auditoria` (8084).
+    - `ReportesBffController`: `/api/bff/reportes/**` hacia `ms-rutaexpress-reportes` (8086).
+  - Conectividad actualizada con `JdkClientHttpRequestFactory` con soporte de `PATCH` y timeouts configurables.
+  - Endpoint de salud `/api/publico/salud`.
+  - 24/24 pruebas automatizadas en verde (unitarias, controllers MockMvc y seguridad RBAC).
+  - Rama `feat/orquestacion-bff-catalogo-auditoria-reportes-issue-35` subida a GitHub.
+
 ---
 
-## 4. Proximo Issue a Resolver: Issue #24
+- **Issue #39: [DevOps] Proxy Inverso Nginx con HTTPS para Frontend y Backend (Resolver MSAL sin flags y CORS)**
+  - Implementado en `infra/nginx` y registrado en `infra/apps/compose.yml`.
+  - Servidor Nginx 1.27 en puerto 443 (HTTPS) con redirección automática 301 desde puerto 80 (HTTP).
+  - Certificados SSL X.509 generados (`localhost.crt` y `localhost.key`) con extensiones Subject Alternative Name (`DNS:localhost`, `IP:127.0.0.1`).
+  - Fachada unificada Same-Origin:
+    - `/` redirige al frontend Angular (`rutaexpress-frontend:80`).
+    - `/api/` redirige al BFF (`ms-rutaexpress-bff:8080/api/`).
+  - Habilitación de Contexto Seguro (`window.isSecureContext = true`) que resuelve definitivamente el error `crypto_nonexistent` de MSAL Angular sin requerir flags de navegador.
+  - Manejo centralizado de preflights CORS `OPTIONS` con respuesta inmediata HTTP 204 No Content.
+  - Script de validación automatizada `infra/nginx/verificar_nginx.ps1` con 5/5 pruebas exitosas.
+  - Rama `infra/proxy-nginx-https-issue-39` lista para PR en el repositorio Hub.
 
-- **ID del Issue:** `#24`
-- **Titulo en GitHub:** `[Backend] Inicializar ms-rutaexpress-reportes (Consumidor Kafka y Motor Analitico)`
+---
+
+## 4. Proximo Issue a Resolver: Issue #26
+
+- **ID del Issue:** `#26`
+- **Titulo en GitHub:** `[Infra] Despliegue Multi-Instancia en AWS (EC2 Apps, EC2 MQ, EC2 Kafka)`
 - **Asignado a:** Claudio (`@clmoralesl`)
-- **Repositorio a Crear:** `ms-rutaexpress-reportes` (puerto `8086`)
-- **Rama a Crear:** `feat/inicializar-ms-rutaexpress-reportes-issue-24`
-- **Dependencias:** Issue #18 (Kafka operativo en `localhost:9092`), Issue #22 (Eventos en `shipments.events`)
+- **Repositorio:** `RUTAEXPRESS_VGUARDIA_CMORALES`
+- **Rama a Crear:** `infra/despliegue-multi-instancia-aws-issue-26`
+- **Dependencias:** Issues #17, #18, #19, #20, #21, #22, #23, #24, #35, #39 (Toda la infraestructura y microservicios funcionales en local)
 
-### Objetivos del Issue #24:
-1. Microservicio Spring Boot 3.3.5 / Java 17 en puerto 8086 suscrito a `shipments.events`.
-2. Calculo y agregacion en tiempo real sin sobrecargar la base de datos transaccional de envios:
-   - Lead Time promedio (tiempo transcurrido entre creacion y entrega efectiva).
-   - Volumen de envios por hora en ventanas de tiempo (ultimas 24h).
-   - Conteo de envios por estado activo (en bodega vs en ruta vs entregados).
-3. Endpoints de analitica:
-   - `GET /api/reportes/kpis?rango=ultimas24h`
-   - `GET /api/reportes/top-servicios?rango=ultimos7dias`
-   - `GET /api/reportes/rendimiento-couriers`
-   - `GET /api/publico/salud`
+### Objetivos del Issue #26:
+1. Definicion de infraestructura en AWS mediante Terraform / Scripts para despliegue distribuido:
+   - Instancia `ec2-apps`: Frontend (Nginx HTTPS), BFF y microservicios de dominio.
+   - Instancia `ec2-mq`: Cluster RabbitMQ con topologia de colas y DLQ.
+   - Instancia `ec2-kafka`: Zookeeper, Apache Kafka y Kafka UI.
+2. Security Groups estrictos que permitan comunicacion interna entre instancias en los puertos AMQP (5672) y Kafka (9092), exponiendo publicamente solo HTTPS (443) y SSH administrativo.
+3. Scripts de aprovisionamiento automatizado y manual de despliegue.
+
+
+
