@@ -17,6 +17,7 @@ El código fuente del sistema está distribuido en repositorios independientes p
 | **Microservicio Catálogo** |  [ms-rutaexpress-catalogo](https://github.com/clmoralesl/ms-rutaexpress-catalogo) | Servicio de Dominio para tarifas y control atómico de capacidad vehicular |
 | **Microservicio Notificaciones** |  [ms-rutaexpress-notificaciones](https://github.com/clmoralesl/ms-rutaexpress-notificaciones) | Consumidor RabbitMQ para notificaciones, tickets de bodega y rotulado |
 | **Microservicio Auditoría** |  [ms-rutaexpress-auditoria](https://github.com/clmoralesl/ms-rutaexpress-auditoria) | Consumidor Kafka para historial inmutable de auditoría y timeline de envíos |
+| **Microservicio Reportes** |  [ms-rutaexpress-reportes](https://github.com/clmoralesl/ms-rutaexpress-reportes) | Consumidor Kafka y Motor Analítico para KPIs y métricas operacionales |
 | **Frontend Web** |  [rutaexpress-frontend](https://github.com/clmoralesl/rutaexpress-frontend) | Aplicación Web en Angular con MSAL |
 | **Hub Documentación** |  [RUTAEXPRESS_VGUARDIA_CMORALES](https://github.com/clmoralesl/RUTAEXPRESS_VGUARDIA_CMORALES) | Repositorio Central de Tareas y Documentación |
 
