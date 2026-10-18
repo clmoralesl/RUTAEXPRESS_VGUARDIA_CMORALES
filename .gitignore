@@ -55,6 +55,8 @@ ms-rutaexpress-bff/
 ms-rutaexpress-envios/
 ms-rutaexpress-catalogo/
 ms-rutaexpress-notificaciones/
+ms-rutaexpress-auditoria/
+ms-rutaexpress-reportes/
 rutaexpress-frontend/
 infra/oracle/wallet/
 terraform.tfvars
