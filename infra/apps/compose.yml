@@ -77,6 +77,23 @@ services:
       - ../oracle/wallet:/opt/oracle/wallet:ro
     networks:
       - rutaexpress-network
+  # ----------------------------------------------------------------------------
+  # Proxy Inverso Nginx con HTTPS (Fachada Same-Origin y Contexto Seguro MSAL)
+  # ----------------------------------------------------------------------------
+  rutaexpress-nginx-proxy:
+    image: nginx:1.27-alpine
+    container_name: rutaexpress-nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - ms-rutaexpress-bff
+      - rutaexpress-frontend
+    networks:
+      - rutaexpress-network
     restart: unless-stopped
 
 networks:
