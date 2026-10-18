@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Bootstrap Automatizado: Frontend Nginx HTTPS, BFF y Microservicios en ec2-apps
+# Bootstrap Automatizado: Stack Completo en ec2-apps (Issue #26)
 # ==============================================================================
 
 set -euo pipefail
@@ -10,7 +10,7 @@ export DEBIAN_FRONTEND=noninteractive
 RABBITMQ_HOST="${RABBITMQ_PRIVATE_IP}"
 KAFKA_SERVERS="${KAFKA_PRIVATE_IP}:9092"
 
-echo "=== [1/5] Actualizando sistema e instalando Docker ==="
+echo "=== [1/6] Actualizando sistema e instalando Docker, Git y OpenSSL ==="
 apt-get update -y
 apt-get install -y ca-certificates curl gnupg lsb-release openssl git
 
@@ -28,101 +28,22 @@ systemctl enable docker
 systemctl start docker
 usermod -aG docker ubuntu || true
 
-echo "=== [2/5] Configurando estructura de directorios y certificados SSL ==="
-mkdir -p /opt/rutaexpress/apps/nginx/certs
-cd /opt/rutaexpress/apps
+echo "=== [2/6] Preparando espacio de trabajo y clonando repositorios ==="
+mkdir -p /opt/rutaexpress
+cd /opt/rutaexpress
 
-# Generacion de certificados SSL autofirmados con SAN
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /opt/rutaexpress/apps/nginx/certs/localhost.key \
-    -out /opt/rutaexpress/apps/nginx/certs/localhost.crt \
-    -subj "/C=CL/ST=Region Metropolitana/L=Santiago/O=RutaExpress SaaS/OU=Cloud/CN=localhost" \
-    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+# Clonar repositorios de microservicios y frontend
+git clone https://github.com/clmoralesl/RUTAEXPRESS_VGUARDIA_CMORALES.git || (cd RUTAEXPRESS_VGUARDIA_CMORALES && git pull)
+git clone https://github.com/clmoralesl/rutaexpress-frontend.git || (cd rutaexpress-frontend && git pull)
+git clone https://github.com/clmoralesl/ms-rutaexpress-bff.git || (cd ms-rutaexpress-bff && git pull)
+git clone https://github.com/clmoralesl/ms-rutaexpress-envios.git || (cd ms-rutaexpress-envios && git pull)
+git clone https://github.com/clmoralesl/ms-rutaexpress-catalogo.git || (cd ms-rutaexpress-catalogo && git pull)
+git clone https://github.com/clmoralesl/ms-rutaexpress-notificaciones.git || (cd ms-rutaexpress-notificaciones && git pull)
+git clone https://github.com/clmoralesl/ms-rutaexpress-auditoria.git || (cd ms-rutaexpress-auditoria && git pull)
+git clone https://github.com/clmoralesl/ms-rutaexpress-reportes.git || (cd ms-rutaexpress-reportes && git pull)
 
-echo "=== [3/5] Generando nginx.conf con HTTPS y contexto seguro MSAL ==="
-cat << 'EOF' > /opt/rutaexpress/apps/nginx/nginx.conf
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /var/run/nginx.pid;
-
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-    sendfile on;
-    keepalive_timeout 65;
-    server_tokens off;
-
-    # DNS de Docker
-    resolver 127.0.0.11 valid=30s ipv6=off;
-
-    # Redireccion forzosa HTTP a HTTPS
-    server {
-        listen 80;
-        server_name _;
-        location / {
-            return 301 https://$host$request_uri;
-        }
-    }
-
-    # Fachada Unificada HTTPS Same-Origin
-    server {
-        listen 443 ssl;
-        http2 on;
-        server_name _;
-
-        ssl_certificate /etc/nginx/certs/localhost.crt;
-        ssl_certificate_key /etc/nginx/certs/localhost.key;
-        ssl_protocols TLSv1.2 TLSv1.3;
-        ssl_ciphers HIGH:!aNULL:!MD5;
-
-        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header X-Frame-Options "SAMEORIGIN" always;
-
-        # API y BFF
-        location /api/ {
-            if ($request_method = 'OPTIONS') {
-                add_header 'Access-Control-Allow-Origin' '$http_origin' always;
-                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
-                add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, Accept, Origin, X-Requested-With' always;
-                add_header 'Access-Control-Allow-Credentials' 'true' always;
-                add_header 'Access-Control-Max-Age' 86400;
-                return 204;
-            }
-
-            set $upstream_bff http://ms-rutaexpress-bff:8080;
-            proxy_pass $upstream_bff$request_uri;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto https;
-        }
-
-        # Frontend SPA
-        location / {
-            set $upstream_frontend http://rutaexpress-frontend:80;
-            proxy_pass $upstream_frontend$request_uri;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-Proto https;
-        }
-
-        location /salud-proxy {
-            default_type application/json;
-            return 200 '{"estado":"UP","servicio":"rutaexpress-nginx-proxy","nodo":"aws-ec2-apps"}';
-        }
-    }
-}
-EOF
-
-echo "=== [4/5] Escribiendo variables de entorno de conexion hacia ec2-mq y ec2-kafka ==="
-cat << EOF > /opt/rutaexpress/apps/.env
+echo "=== [3/6] Escribiendo variables de entorno unificadas (.env) ==="
+cat << EOF > /opt/rutaexpress/.env
 SPRING_PROFILES_ACTIVE=prod
 SPRING_RABBITMQ_HOST=$RABBITMQ_HOST
 SPRING_RABBITMQ_PORT=5672
@@ -136,49 +57,43 @@ RUTAEXPRESS_REPORTES_URL=http://ms-rutaexpress-reportes:8086
 RUTAEXPRESS_ENVIOS_URL=http://ms-rutaexpress-envios:8081
 EOF
 
-echo "=== [5/5] Generando docker-compose.yml para las aplicaciones ==="
-cat << 'EOF' > /opt/rutaexpress/apps/docker-compose.yml
-services:
-  rutaexpress-nginx-proxy:
-    image: nginx:1.27-alpine
-    container_name: rutaexpress-nginx-proxy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/certs:/etc/nginx/certs:ro
-    depends_on:
-      - ms-rutaexpress-bff
-      - rutaexpress-frontend
-    networks:
-      - rutaexpress-network
+echo "=== [4/6] Generando certificados SSL para Nginx en la nube ==="
+mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/nginx/certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/nginx/certs/localhost.key \
+    -out /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/nginx/certs/localhost.crt \
+    -subj "/C=CL/ST=Region Metropolitana/L=Santiago/O=RutaExpress SaaS/OU=Cloud/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 
-  ms-rutaexpress-bff:
-    image: eclipse-temurin:17-jre-alpine
-    container_name: ms-rutaexpress-bff
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "8080:8080"
-    networks:
-      - rutaexpress-network
-    command: ["sh", "-c", "echo 'BFF Container Ready' && sleep infinity"]
+echo "=== [5/6] Construyendo y levantando la suite de microservicios con Docker Compose ==="
+cd /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES
 
-  rutaexpress-frontend:
-    image: nginx:1.27-alpine
-    container_name: rutaexpress-frontend
-    restart: unless-stopped
-    ports:
-      - "4200:80"
-    networks:
-      - rutaexpress-network
+# Levantar todos los microservicios, frontend y Nginx HTTPS
+docker compose -f infra/apps/compose.yml up -d --build
 
-networks:
-  rutaexpress-network:
-    driver: bridge
+echo "=== [6/6] Verificando contenedores activos en ec2-apps ==="
+sleep 15
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# Generar script de actualizacion en caliente para cambios de GitHub
+cat << 'EOF' > /opt/rutaexpress/actualizar.sh
+#!/usr/bin/env bash
+set -euo pipefail
+echo "=== Sincronizando repositorios desde GitHub ==="
+cd /opt/rutaexpress
+for repo in RUTAEXPRESS_VGUARDIA_CMORALES rutaexpress-frontend ms-rutaexpress-bff ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-notificaciones ms-rutaexpress-auditoria ms-rutaexpress-reportes; do
+  if [ -d "$repo" ]; then
+    echo "Actualizando $repo (origin/main)..."
+    git -C "$repo" fetch origin main
+    git -C "$repo" reset --hard origin/main
+  fi
+done
+cd /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES
+echo "Reconstruyendo y desplegando contenedores actualizados..."
+docker compose -f infra/apps/compose.yml up -d --build
+echo "=== Actualizacion completada exitosamente ==="
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 EOF
+chmod +x /opt/rutaexpress/actualizar.sh
 
-docker compose up -d
 echo "=== Bootstrap ec2-apps completado exitosamente ==="
