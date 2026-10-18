@@ -75,4 +75,25 @@ echo "=== [6/6] Verificando contenedores activos en ec2-apps ==="
 sleep 15
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
+# Generar script de actualizacion en caliente para cambios de GitHub
+cat << 'EOF' > /opt/rutaexpress/actualizar.sh
+#!/usr/bin/env bash
+set -euo pipefail
+echo "=== Sincronizando repositorios desde GitHub ==="
+cd /opt/rutaexpress
+for repo in RUTAEXPRESS_VGUARDIA_CMORALES rutaexpress-frontend ms-rutaexpress-bff ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-notificaciones ms-rutaexpress-auditoria ms-rutaexpress-reportes; do
+  if [ -d "$repo" ]; then
+    echo "Actualizando $repo (origin/main)..."
+    git -C "$repo" fetch origin main
+    git -C "$repo" reset --hard origin/main
+  fi
+done
+cd /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES
+echo "Reconstruyendo y desplegando contenedores actualizados..."
+docker compose -f infra/apps/compose.yml up -d --build
+echo "=== Actualizacion completada exitosamente ==="
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+EOF
+chmod +x /opt/rutaexpress/actualizar.sh
+
 echo "=== Bootstrap ec2-apps completado exitosamente ==="
