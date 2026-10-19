@@ -47,6 +47,8 @@ infra/update_aws_credentials.ps1
 infra/k8s/01-secrets.yaml
 DOCS/credenciales*
 *credenciales*
+*.pem
+infra/*.pem
 
 # Archivos de estado y cachés de Terraform
 **/.terraform/

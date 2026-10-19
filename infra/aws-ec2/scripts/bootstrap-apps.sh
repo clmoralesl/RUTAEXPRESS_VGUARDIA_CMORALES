@@ -32,6 +32,8 @@ echo "=== [2/6] Preparando espacio de trabajo y clonando repositorios ==="
 mkdir -p /opt/rutaexpress
 cd /opt/rutaexpress
 
+API_GATEWAY_URL="${API_GATEWAY_URL:-}"
+
 # Clonar repositorios de microservicios y frontend
 git clone https://github.com/clmoralesl/RUTAEXPRESS_VGUARDIA_CMORALES.git || (cd RUTAEXPRESS_VGUARDIA_CMORALES && git pull)
 git clone https://github.com/clmoralesl/rutaexpress-frontend.git || (cd rutaexpress-frontend && git pull)
@@ -41,6 +43,12 @@ git clone https://github.com/clmoralesl/ms-rutaexpress-catalogo.git || (cd ms-ru
 git clone https://github.com/clmoralesl/ms-rutaexpress-notificaciones.git || (cd ms-rutaexpress-notificaciones && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-auditoria.git || (cd ms-rutaexpress-auditoria && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-reportes.git || (cd ms-rutaexpress-reportes && git pull)
+
+# Inyectar dinamicamente la URL del API Gateway en el frontend antes de la compilacion Docker
+if [ -n "$API_GATEWAY_URL" ]; then
+  echo "Inyectando API Gateway URL ($API_GATEWAY_URL) en environment.prod.ts..."
+  sed -i "s|apiUrl: '.*'|apiUrl: '${API_GATEWAY_URL}'|g" /opt/rutaexpress/rutaexpress-frontend/src/environments/environment.prod.ts
+fi
 
 echo "=== [2.1] Preparando directorio para Oracle Cloud Wallet ==="
 mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet
@@ -60,6 +68,12 @@ RUTAEXPRESS_AUDITORIA_URL=http://ms-rutaexpress-auditoria:8084
 RUTAEXPRESS_REPORTES_URL=http://ms-rutaexpress-reportes:8086
 RUTAEXPRESS_ENVIOS_URL=http://ms-rutaexpress-envios:8081
 EOF
+cp /opt/rutaexpress/.env /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/.env
+
+# Enlazar microservicios dentro de RUTAEXPRESS_VGUARDIA_CMORALES para rutas relativas de compose.yml
+for repo in rutaexpress-frontend ms-rutaexpress-bff ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-notificaciones ms-rutaexpress-auditoria ms-rutaexpress-reportes; do
+  [ -e "/opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/$repo" ] || ln -s "/opt/rutaexpress/$repo" "/opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/$repo"
+done
 
 echo "=== [4/6] Generando certificados SSL para Nginx en la nube ==="
 mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/nginx/certs
