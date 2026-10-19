@@ -335,6 +335,7 @@ resource "aws_instance" "ec2_apps" {
   user_data = templatefile("${path.module}/scripts/bootstrap-apps.sh", {
     RABBITMQ_PRIVATE_IP = aws_instance.ec2_mq.private_ip
     KAFKA_PRIVATE_IP    = aws_instance.ec2_kafka.private_ip
+    API_GATEWAY_URL     = aws_apigatewayv2_api.rutaexpress_api.api_endpoint
   })
 
   depends_on = [

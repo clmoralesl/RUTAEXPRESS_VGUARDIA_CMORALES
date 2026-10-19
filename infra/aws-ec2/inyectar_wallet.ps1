@@ -3,7 +3,7 @@
 # ==============================================================================
 
 param(
-    [string]$KeyPath = "$HOME/Downloads/labsuser.pem",
+    [string]$KeyPath = "",
     [string]$Ec2Host = ""
 )
 
@@ -22,17 +22,22 @@ if ([string]::IsNullOrWhiteSpace($Ec2Host)) {
     $Ec2Host = & terraform -chdir="$scriptDir" output -raw ec2_apps_public_ip
 }
 
-if (-not (Test-Path $KeyPath)) {
-    $altKey = Join-Path $HOME "Downloads/vockey.pem"
-    if (Test-Path $altKey) {
-        $KeyPath = $altKey
+if ([string]::IsNullOrWhiteSpace($KeyPath) -or -not (Test-Path $KeyPath)) {
+    $defaultKey = Join-Path $scriptDir "../labsuser.pem"
+    if (Test-Path $defaultKey) {
+        $KeyPath = $defaultKey
     } else {
-        $altKey2 = Join-Path $HOME "Downloads/devops_key_cm_vg.pem"
-        if (Test-Path $altKey2) {
-            $KeyPath = $altKey2
+        $altKey = Join-Path $HOME "Downloads/labsuser.pem"
+        if (Test-Path $altKey) {
+            $KeyPath = $altKey
         } else {
-            Write-Error "No se encontro la llave privada SSH en $KeyPath. Especifique el parametro -KeyPath."
-            exit 1
+            $altKey2 = Join-Path $HOME "Downloads/vockey.pem"
+            if (Test-Path $altKey2) {
+                $KeyPath = $altKey2
+            } else {
+                Write-Error "No se encontro la llave privada SSH en $KeyPath ni en infra/labsuser.pem. Especifique el parametro -KeyPath."
+                exit 1
+            }
         }
     }
 }
@@ -42,13 +47,16 @@ Write-Host "Inyectando Oracle Wallet en $Ec2Host utilizando la llave $KeyPath...
 # 1. Copiar archivo comprimido hacia directorio temporal
 & scp -o StrictHostKeyChecking=no -i "$KeyPath" "$zipPath" "ubuntu@${Ec2Host}:/tmp/Wallet_rutaexpressdb.zip"
 
-# 2. Descomprimir y aplicar permisos 600
+# 2. Descomprimir, aplicar permisos 755/644 y reiniciar servicios dependientes
 $remoteCmd = "sudo mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet && " + `
              "sudo unzip -o /tmp/Wallet_rutaexpressdb.zip -d /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet && " + `
-             "sudo chmod -R 600 /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet/* && " + `
+             "sudo chmod 755 /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet && " + `
+             "sudo chmod 644 /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet/* && " + `
              "sudo rm -f /tmp/Wallet_rutaexpressdb.zip && " + `
-             "echo 'Wallet desplegado exitosamente en el servidor.'"
+             "echo 'Wallet desplegado. Reiniciando microservicios dependientes de Oracle...' && " + `
+             "sudo docker compose -f /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/apps/compose.yml restart ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-auditoria ms-rutaexpress-bff && " + `
+             "echo 'Microservicios reconectados exitosamente a Oracle Cloud.'"
 
 & ssh -o StrictHostKeyChecking=no -i "$KeyPath" "ubuntu@${Ec2Host}" "$remoteCmd"
 
-Write-Host "Oracle Wallet inyectado y protegido con permisos 600." -ForegroundColor Green
+Write-Host "Oracle Wallet inyectado y microservicios sincronizados." -ForegroundColor Green
