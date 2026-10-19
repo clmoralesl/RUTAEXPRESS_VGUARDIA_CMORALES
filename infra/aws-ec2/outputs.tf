@@ -32,9 +32,15 @@ output "ec2_kafka_private_ip" {
   value       = aws_instance.ec2_kafka.private_ip
 }
 
+output "api_gateway_url" {
+  description = "URL publica de AWS API Gateway (HTTP API) con CORS gestionado nativamente en AWS"
+  value       = aws_apigatewayv2_stage.default_stage.invoke_url
+}
+
 output "urls_acceso" {
   description = "Puntos de acceso HTTPS y paneles administrativos en la nube"
   value = {
+    api_gateway_url  = aws_apigatewayv2_stage.default_stage.invoke_url
     frontend_https   = "https://${aws_instance.ec2_apps.public_ip}/"
     salud_proxy      = "https://${aws_instance.ec2_apps.public_ip}/salud-proxy"
     api_bff_salud    = "https://${aws_instance.ec2_apps.public_ip}/api/publico/salud"
