@@ -118,6 +118,14 @@ resource "aws_security_group" "sg_ec2_apps" {
   }
 
   ingress {
+    description = "Acceso HTTP hacia ms-rutaexpress-bff desde AWS API Gateway"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     description = "Administracion remota SSH"
     from_port   = 22
     to_port     = 22
