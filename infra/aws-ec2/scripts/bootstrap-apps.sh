@@ -32,7 +32,7 @@ echo "=== [2/6] Preparando espacio de trabajo y clonando repositorios ==="
 mkdir -p /opt/rutaexpress
 cd /opt/rutaexpress
 
-API_GATEWAY_URL="${API_GATEWAY_URL:-}"
+API_GATEWAY_URL="${API_GATEWAY_URL}"
 
 # Clonar repositorios de microservicios y frontend
 git clone https://github.com/clmoralesl/RUTAEXPRESS_VGUARDIA_CMORALES.git || (cd RUTAEXPRESS_VGUARDIA_CMORALES && git pull)
