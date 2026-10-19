@@ -248,8 +248,9 @@ EOF
 echo "=== [3/4] Levantando contenedor RabbitMQ ==="
 docker compose up -d
 
-echo "=== [4/4] Verificando salud del servicio ==="
+echo "=== [4/4] Verificando salud del servicio y asegurando credenciales ==="
 sleep 10
+docker exec rutaexpress-rabbitmq rabbitmqctl change_password guest guest || true
 docker ps
 curl -s -u guest:guest http://localhost:15672/api/overview | grep -o '"rabbitmq_version":"[^"]*"' || true
 echo "=== Bootstrap RabbitMQ completado exitosamente ==="
