@@ -12,7 +12,7 @@ KAFKA_SERVERS="${KAFKA_PRIVATE_IP}:9092"
 
 echo "=== [1/6] Actualizando sistema e instalando Docker, Git y OpenSSL ==="
 apt-get update -y
-apt-get install -y ca-certificates curl gnupg lsb-release openssl git
+apt-get install -y ca-certificates curl gnupg lsb-release openssl git unzip
 
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -41,6 +41,20 @@ git clone https://github.com/clmoralesl/ms-rutaexpress-catalogo.git || (cd ms-ru
 git clone https://github.com/clmoralesl/ms-rutaexpress-notificaciones.git || (cd ms-rutaexpress-notificaciones && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-auditoria.git || (cd ms-rutaexpress-auditoria && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-reportes.git || (cd ms-rutaexpress-reportes && git pull)
+
+echo "=== [2.1] Aprovisionando Oracle Cloud Wallet desde Terraform ==="
+ORACLE_WALLET_B64="${ORACLE_WALLET_BASE64}"
+mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet
+if [ -n "$ORACLE_WALLET_B64" ]; then
+  echo "Descomprimiendo Oracle Wallet en infra/oracle/wallet..."
+  echo "$ORACLE_WALLET_B64" | base64 -d > /tmp/wallet.zip
+  unzip -o /tmp/wallet.zip -d /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet
+  chmod -R 600 /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet/* || true
+  rm -f /tmp/wallet.zip
+  echo "Oracle Wallet desplegado exitosamente."
+else
+  echo "Aviso: ORACLE_WALLET_BASE64 no suministrado o vacio. Proceder manualmente si se requiere conexion Oracle."
+fi
 
 echo "=== [3/6] Escribiendo variables de entorno unificadas (.env) ==="
 cat << EOF > /opt/rutaexpress/.env

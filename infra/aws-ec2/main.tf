@@ -318,6 +318,11 @@ resource "aws_instance" "ec2_kafka" {
 # 6. Instancia EC2 Apps: Frontend Nginx HTTPS, BFF y Microservicios
 # ------------------------------------------------------------------------------
 
+locals {
+  oracle_wallet_zip_path = "${path.module}/../oracle/Wallet_rutaexpressdb.zip"
+  oracle_wallet_base64   = fileexists("${path.module}/../oracle/Wallet_rutaexpressdb.zip") ? filebase64("${path.module}/../oracle/Wallet_rutaexpressdb.zip") : ""
+}
+
 resource "aws_instance" "ec2_apps" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type_apps
@@ -333,8 +338,9 @@ resource "aws_instance" "ec2_apps" {
   }
 
   user_data = templatefile("${path.module}/scripts/bootstrap-apps.sh", {
-    RABBITMQ_PRIVATE_IP = aws_instance.ec2_mq.private_ip
-    KAFKA_PRIVATE_IP    = aws_instance.ec2_kafka.private_ip
+    RABBITMQ_PRIVATE_IP  = aws_instance.ec2_mq.private_ip
+    KAFKA_PRIVATE_IP     = aws_instance.ec2_kafka.private_ip
+    ORACLE_WALLET_BASE64 = local.oracle_wallet_base64
   })
 
   depends_on = [
