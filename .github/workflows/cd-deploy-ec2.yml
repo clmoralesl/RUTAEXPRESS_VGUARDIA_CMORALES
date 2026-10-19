@@ -1,0 +1,33 @@
+name: Actualizacion Manual de Despliegue en AWS EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      ec2_host:
+        description: 'IP publica o DNS de ec2-apps (opcional si se usa el secreto EC2_HOST)'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    name: Actualizar Suite en ec2-apps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determinar direccion de ec2-apps
+        id: set-host
+        run: |
+          if [ -n "${{ github.event.inputs.ec2_host }}" ]; then
+            echo "host=${{ github.event.inputs.ec2_host }}" >> $GITHUB_OUTPUT
+          else
+            echo "host=${{ secrets.EC2_HOST }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Ejecutar script de actualizacion en caliente
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.set-host.outputs.host }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            sudo /opt/rutaexpress/actualizar.sh
