@@ -17,6 +17,11 @@ services:
       - ../../.env
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - RUTAEXPRESS_NOTIFICACIONES_URL=http://ms-rutaexpress-notificaciones:8083
+      - RUTAEXPRESS_CATALOGO_URL=http://ms-rutaexpress-catalogo:8082
+      - RUTAEXPRESS_ENVIOS_URL=http://ms-rutaexpress-envios:8081
+      - RUTAEXPRESS_AUDITORIA_URL=http://ms-rutaexpress-auditoria:8084
+      - RUTAEXPRESS_REPORTES_URL=http://ms-rutaexpress-reportes:8086
     networks:
       - rutaexpress-network
     restart: unless-stopped
@@ -52,6 +57,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SERVER_PORT=8081
+      - CATALOGO_SERVICE_URL=http://ms-rutaexpress-catalogo:8082
     volumes:
       - ../oracle/wallet:/opt/oracle/wallet:ro
     networks:

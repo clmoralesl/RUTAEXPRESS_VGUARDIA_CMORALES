@@ -67,6 +67,8 @@ RUTAEXPRESS_CATALOGO_URL=http://ms-rutaexpress-catalogo:8082
 RUTAEXPRESS_AUDITORIA_URL=http://ms-rutaexpress-auditoria:8084
 RUTAEXPRESS_REPORTES_URL=http://ms-rutaexpress-reportes:8086
 RUTAEXPRESS_ENVIOS_URL=http://ms-rutaexpress-envios:8081
+RUTAEXPRESS_NOTIFICACIONES_URL=http://ms-rutaexpress-notificaciones:8083
+CATALOGO_SERVICE_URL=http://ms-rutaexpress-catalogo:8082
 EOF
 cp /opt/rutaexpress/.env /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/.env
 
