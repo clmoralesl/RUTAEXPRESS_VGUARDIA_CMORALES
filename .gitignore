@@ -45,6 +45,8 @@ DOCS/guias/
 # Secretos de AWS y credenciales temporales
 infra/update_aws_credentials.ps1
 infra/k8s/01-secrets.yaml
+DOCS/credenciales*
+*credenciales*
 
 # Archivos de estado y cachés de Terraform
 **/.terraform/

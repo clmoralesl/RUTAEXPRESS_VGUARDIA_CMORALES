@@ -42,19 +42,9 @@ git clone https://github.com/clmoralesl/ms-rutaexpress-notificaciones.git || (cd
 git clone https://github.com/clmoralesl/ms-rutaexpress-auditoria.git || (cd ms-rutaexpress-auditoria && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-reportes.git || (cd ms-rutaexpress-reportes && git pull)
 
-echo "=== [2.1] Aprovisionando Oracle Cloud Wallet desde Terraform ==="
-ORACLE_WALLET_B64="${ORACLE_WALLET_BASE64}"
+echo "=== [2.1] Preparando directorio para Oracle Cloud Wallet ==="
 mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet
-if [ -n "$ORACLE_WALLET_B64" ]; then
-  echo "Descomprimiendo Oracle Wallet en infra/oracle/wallet..."
-  echo "$ORACLE_WALLET_B64" | base64 -d > /tmp/wallet.zip
-  unzip -o /tmp/wallet.zip -d /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet
-  chmod -R 600 /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet/* || true
-  rm -f /tmp/wallet.zip
-  echo "Oracle Wallet desplegado exitosamente."
-else
-  echo "Aviso: ORACLE_WALLET_BASE64 no suministrado o vacio. Proceder manualmente si se requiere conexion Oracle."
-fi
+echo "Directorio de wallet preparado. La inyeccion de certificados se realiza post-arranque."
 
 echo "=== [3/6] Escribiendo variables de entorno unificadas (.env) ==="
 cat << EOF > /opt/rutaexpress/.env
