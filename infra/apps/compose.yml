@@ -58,6 +58,8 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - SERVER_PORT=8081
       - CATALOGO_SERVICE_URL=http://ms-rutaexpress-catalogo:8082
+      - RABBITMQ_HOST=rutaexpress-rabbitmq
+      - RABBITMQ_PORT=5672
     volumes:
       - ../oracle/wallet:/opt/oracle/wallet:ro
     networks:
