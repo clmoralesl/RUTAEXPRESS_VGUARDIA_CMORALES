@@ -143,3 +143,28 @@ Instrucciones estrictas a ejecutar en orden:
   ssh -i infra/labsuser.pem ubuntu@<ec2_apps_public_ip> "sudo docker ps"
   ```
   Los 8 contenedores (`rutaexpress-frontend`, `ms-rutaexpress-bff`, `ms-rutaexpress-envios`, `ms-rutaexpress-catalogo`, `ms-rutaexpress-notificaciones`, `ms-rutaexpress-auditoria`, `ms-rutaexpress-reportes` y `rutaexpress-nginx-proxy`) deben encontrarse en estado `Up`.
+
+---
+
+## 7. Actualizacion de Repositorios y Despliegue en Caliente en EC2
+
+Cuando se realicen nuevos commits o merges en la rama `main` de GitHub (en el frontend, BFF o cualquiera de los microservicios), no es necesario destruir la infraestructura para aplicar los cambios. Se puede sincronizar la instancia `ec2-apps` utilizando cualquiera de los siguientes dos metodos:
+
+### Opcion A: Comando Directo por SSH (Recomendada y Rapida)
+Desde su terminal local de PowerShell, ejecute:
+```powershell
+ssh -i infra/labsuser.pem ubuntu@<ec2_apps_public_ip> "sudo /opt/rutaexpress/actualizar.sh"
+```
+**Acciones que ejecuta el script en el servidor:**
+1. Realiza `git fetch origin main` y `git reset --hard origin/main` en los 8 repositorios ubicados en `/opt/rutaexpress/`.
+2. Ejecuta `docker compose -f infra/apps/compose.yml up -d --build`, recompilando y recreando unicamente los contenedores que contengan modificaciones de codigo.
+3. Mantiene intactas las conexiones activas a Oracle Cloud ATP, RabbitMQ y Apache Kafka sin interrupcion de servicio.
+
+### Opcion B: Mediante GitHub Actions (Desde la Web de GitHub)
+Si prefiere disparar la actualizacion desde la interfaz web de GitHub:
+1. Ingrese al repositorio `RUTAEXPRESS_VGUARDIA_CMORALES` en GitHub y haga clic en la pestaña **Actions**.
+2. En la lista lateral izquierda, seleccione el workflow **Actualizacion Manual de Despliegue en AWS EC2**.
+3. Haga clic en el boton desplegable **Run workflow**.
+4. Ingrese la direccion IP publica actual de `ec2-apps` en el campo `ec2_host` y confirme la ejecucion.
+*(Requisito: Debe estar configurado el secreto `EC2_SSH_KEY` en `Settings > Secrets and variables > Actions` con el contenido del archivo `labsuser.pem`).*
+

@@ -296,6 +296,31 @@ Instrucciones estrictas a ejecutar en orden:
     </li>
   </ul>
 
+  <h2>7. Actualizacion de Repositorios y Despliegue en Caliente en EC2</h2>
+  <p>Cuando se realicen nuevos commits o merges en la rama <code>main</code> de GitHub (en el frontend, BFF o cualquiera de los microservicios), no es necesario destruir la infraestructura para aplicar los cambios. Se puede sincronizar la instancia <code>ec2-apps</code> utilizando cualquiera de los siguientes dos metodos:</p>
+
+  <h3>Opcion A: Comando Directo por SSH (Recomendada y Rapida)</h3>
+  <p>Desde su terminal local de PowerShell, ejecute:</p>
+  <pre><code>ssh -i infra/labsuser.pem ubuntu@&lt;ec2_apps_public_ip&gt; "sudo /opt/rutaexpress/actualizar.sh"</code></pre>
+  <p><strong>Acciones que ejecuta el script en el servidor:</strong></p>
+  <ol>
+    <li>Realiza <code>git fetch origin main</code> y <code>git reset --hard origin/main</code> en los 8 repositorios ubicados en <code>/opt/rutaexpress/</code>.</li>
+    <li>Ejecuta <code>docker compose -f infra/apps/compose.yml up -d --build</code>, recompilando y recreando unicamente los contenedores que contengan modificaciones de codigo.</li>
+    <li>Mantiene intactas las conexiones activas a Oracle Cloud ATP, RabbitMQ y Apache Kafka sin interrupcion de servicio.</li>
+  </ol>
+
+  <h3>Opcion B: Mediante GitHub Actions (Desde la Web de GitHub)</h3>
+  <p>Si prefiere disparar la actualizacion desde la interfaz web de GitHub:</p>
+  <ol>
+    <li>Ingrese al repositorio <code>RUTAEXPRESS_VGUARDIA_CMORALES</code> en GitHub y haga clic en la pestaña <strong>Actions</strong>.</li>
+    <li>En la lista lateral izquierda, seleccione el workflow <strong>Actualizacion Manual de Despliegue en AWS EC2</strong>.</li>
+    <li>Haga clic en el boton desplegable <strong>Run workflow</strong>.</li>
+    <li>Ingrese la direccion IP publica actual de <code>ec2-apps</code> en el campo <code>ec2_host</code> y confirme la ejecucion.</li>
+  </ol>
+  <div class="nota">
+    <strong>Requisito previo para GitHub Actions:</strong> Debe estar configurado el secreto <code>EC2_SSH_KEY</code> en <code>Settings &gt; Secrets and variables &gt; Actions</code> con el contenido del archivo <code>labsuser.pem</code>.
+  </div>
+
   <div class="footer">
     RutaExpress Cloud Architecture - Documentacion Tecnica Oficial - 2026
   </div>
