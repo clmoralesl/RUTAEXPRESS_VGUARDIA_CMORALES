@@ -11,7 +11,7 @@ resource "aws_apigatewayv2_api" "rutaexpress_api" {
   cors_configuration {
     allow_origins = ["*"]
     allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-    allow_headers = ["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "Cache-Control"]
+    allow_headers = ["*"]
     max_age       = 86400
   }
 
@@ -34,12 +34,14 @@ resource "aws_apigatewayv2_integration" "bff_integration" {
 }
 
 # ==============================================================================
-# Rutas: Enrutamiento general hacia el BFF
+# Rutas: Enrutamiento hacia el BFF para metodos de negocio (excluye OPTIONS
+# para permitir que el motor nativo de CORS en API Gateway responda 204 No Content)
 # ==============================================================================
 
-resource "aws_apigatewayv2_route" "default_proxy_route" {
+resource "aws_apigatewayv2_route" "proxy_routes" {
+  for_each  = toset(["GET /{proxy+}", "POST /{proxy+}", "PUT /{proxy+}", "DELETE /{proxy+}", "PATCH /{proxy+}"])
   api_id    = aws_apigatewayv2_api.rutaexpress_api.id
-  route_key = "ANY /{proxy+}"
+  route_key = each.value
   target    = "integrations/${aws_apigatewayv2_integration.bff_integration.id}"
 }
 
