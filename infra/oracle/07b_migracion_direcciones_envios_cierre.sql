@@ -19,29 +19,30 @@ DECLARE
     v_bkp_existe NUMBER := 0;
     v_bkp_filas  NUMBER := 0;
 BEGIN
-    -- Validar que la tabla de respaldo exista y no este vacia
+    -- Validar que la tabla de respaldo exista en USER_ENVIOS y no este vacia
     SELECT COUNT(*) INTO v_bkp_existe
-    FROM USER_TABLES
-    WHERE table_name = 'ENVIOS_BKP_ISSUE57';
+    FROM ALL_TABLES
+    WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS_BKP_ISSUE57';
 
     IF v_bkp_existe = 0 THEN
-        RAISE_APPLICATION_ERROR(-20006, 'No existe la tabla de respaldo ENVIOS_BKP_ISSUE57. Abortando cierre por proteccion de datos.');
+        RAISE_APPLICATION_ERROR(-20006, 'No existe la tabla de respaldo USER_ENVIOS.ENVIOS_BKP_ISSUE57. Ejecute primero 07a_migracion_direcciones_envios.sql.');
     END IF;
 
     EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM USER_ENVIOS.ENVIOS_BKP_ISSUE57' INTO v_bkp_filas;
     IF v_bkp_filas = 0 THEN
-        RAISE_APPLICATION_ERROR(-20007, 'La tabla de respaldo ENVIOS_BKP_ISSUE57 esta vacia. Abortando cierre por proteccion de datos.');
+        RAISE_APPLICATION_ERROR(-20007, 'La tabla de respaldo USER_ENVIOS.ENVIOS_BKP_ISSUE57 esta vacia. Abortando cierre por proteccion de datos.');
     END IF;
 
-    -- Validar existencia de las columnas estructuradas
+    -- Validar existencia de las columnas estructuradas en USER_ENVIOS.ENVIOS
     SELECT COUNT(*) INTO v_cols
-    FROM USER_TAB_COLS
-    WHERE table_name = 'ENVIOS' 
+    FROM ALL_TAB_COLS
+    WHERE owner = 'USER_ENVIOS'
+      AND table_name = 'ENVIOS' 
       AND column_name IN ('CALLE_ORIGEN', 'NUMERO_ORIGEN', 'ID_COMUNA_ORIGEN',
                           'CALLE_DESTINO', 'NUMERO_DESTINO', 'ID_COMUNA_DESTINO');
 
     IF v_cols < 6 THEN
-        RAISE_APPLICATION_ERROR(-20004, 'No se han creado todas las columnas estructuradas requeridas. Ejecute primero 07a_migracion_direcciones_envios.sql.');
+        RAISE_APPLICATION_ERROR(-20004, 'No se han creado todas las columnas estructuradas requeridas en USER_ENVIOS.ENVIOS. Ejecute primero 07a_migracion_direcciones_envios.sql.');
     END IF;
 
     -- Validar que no existan valores nulos
