@@ -60,6 +60,7 @@ services:
       - CATALOGO_SERVICE_URL=http://ms-rutaexpress-catalogo:8082
       - RABBITMQ_HOST=rutaexpress-rabbitmq
       - RABBITMQ_PORT=5672
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     volumes:
       - ../oracle/wallet:/opt/oracle/wallet:ro
     networks:
@@ -102,6 +103,8 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SERVER_PORT=8083
+      - RABBITMQ_HOST=rutaexpress-rabbitmq
+      - RABBITMQ_PORT=5672
     networks:
       - rutaexpress-network
     restart: unless-stopped
