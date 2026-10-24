@@ -19,11 +19,11 @@ DECLARE
     v_existe NUMBER := 0;
 BEGIN
     SELECT COUNT(*) INTO v_existe 
-    FROM USER_TABLES 
-    WHERE table_name = 'ENVIOS_BKP_ISSUE57';
+    FROM ALL_TABLES 
+    WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS_BKP_ISSUE57';
 
     IF v_existe > 0 THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Ya existe la tabla ENVIOS_BKP_ISSUE57. Revisar su contenido antes de reejecutar la migracion.');
+        RAISE_APPLICATION_ERROR(-20001, 'Ya existe la tabla USER_ENVIOS.ENVIOS_BKP_ISSUE57. Revisar su contenido antes de reejecutar la migracion.');
     END IF;
 END;
 /

@@ -18,16 +18,16 @@ DECLARE
     v_filas  NUMBER := 0;
 BEGIN
     SELECT COUNT(*) INTO v_existe 
-    FROM USER_TABLES 
-    WHERE table_name = 'ENVIOS_BKP_ISSUE57';
+    FROM ALL_TABLES 
+    WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS_BKP_ISSUE57';
 
     IF v_existe = 0 THEN
-        RAISE_APPLICATION_ERROR(-20003, 'No existe la tabla de respaldo ENVIOS_BKP_ISSUE57. Rollback cancelado para proteger los datos.');
+        RAISE_APPLICATION_ERROR(-20003, 'No existe la tabla de respaldo USER_ENVIOS.ENVIOS_BKP_ISSUE57. Rollback cancelado para proteger los datos.');
     END IF;
 
     EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM USER_ENVIOS.ENVIOS_BKP_ISSUE57' INTO v_filas;
     IF v_filas = 0 THEN
-        RAISE_APPLICATION_ERROR(-20004, 'La tabla de respaldo ENVIOS_BKP_ISSUE57 se encuentra vacia. Rollback cancelado.');
+        RAISE_APPLICATION_ERROR(-20004, 'La tabla de respaldo USER_ENVIOS.ENVIOS_BKP_ISSUE57 se encuentra vacia. Rollback cancelado.');
     END IF;
 END;
 /
@@ -39,8 +39,8 @@ DECLARE
     v_cols NUMBER := 0;
 BEGIN
     SELECT COUNT(*) INTO v_cols
-    FROM USER_TAB_COLS
-    WHERE table_name = 'ENVIOS' AND column_name = 'DIRECCION_ORIGEN';
+    FROM ALL_TAB_COLS
+    WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS' AND column_name = 'DIRECCION_ORIGEN';
 
     IF v_cols = 0 THEN
         EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS ADD (direccion_origen VARCHAR2(255), direccion_destino VARCHAR2(255))';
@@ -66,8 +66,8 @@ DECLARE
     v_cols NUMBER := 0;
 BEGIN
     SELECT COUNT(*) INTO v_cols
-    FROM USER_TAB_COLS
-    WHERE table_name = 'ENVIOS' AND column_name = 'CALLE_ORIGEN';
+    FROM ALL_TAB_COLS
+    WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS' AND column_name = 'CALLE_ORIGEN';
 
     IF v_cols > 0 THEN
         EXECUTE IMMEDIATE '
@@ -121,14 +121,16 @@ DECLARE
     v_nullables NUMBER := 0;
 BEGIN
     SELECT COUNT(*) INTO v_nullables
-    FROM USER_TAB_COLS
-    WHERE table_name = 'ENVIOS'
+    FROM ALL_TAB_COLS
+    WHERE owner = 'USER_ENVIOS'
+      AND table_name = 'ENVIOS'
       AND column_name IN ('DIRECCION_ORIGEN', 'DIRECCION_DESTINO')
       AND nullable = 'Y';
 
     IF v_nullables > 0 THEN
-        FOR c IN (SELECT column_name FROM USER_TAB_COLS
-                  WHERE table_name = 'ENVIOS'
+        FOR c IN (SELECT column_name FROM ALL_TAB_COLS
+                  WHERE owner = 'USER_ENVIOS'
+                    AND table_name = 'ENVIOS'
                     AND column_name IN ('DIRECCION_ORIGEN', 'DIRECCION_DESTINO')
                     AND nullable = 'Y') LOOP
             EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS MODIFY (' || c.column_name || ' NOT NULL)';
@@ -143,22 +145,22 @@ END;
 DECLARE
     v_count NUMBER;
 BEGIN
-    SELECT COUNT(*) INTO v_count FROM USER_CONSTRAINTS WHERE constraint_name = 'FK_ENVIOS_COMUNA_ORIGEN';
+    SELECT COUNT(*) INTO v_count FROM ALL_CONSTRAINTS WHERE owner = 'USER_ENVIOS' AND constraint_name = 'FK_ENVIOS_COMUNA_ORIGEN';
     IF v_count > 0 THEN
         EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP CONSTRAINT fk_envios_comuna_origen';
     END IF;
 
-    SELECT COUNT(*) INTO v_count FROM USER_CONSTRAINTS WHERE constraint_name = 'FK_ENVIOS_COMUNA_DESTINO';
+    SELECT COUNT(*) INTO v_count FROM ALL_CONSTRAINTS WHERE owner = 'USER_ENVIOS' AND constraint_name = 'FK_ENVIOS_COMUNA_DESTINO';
     IF v_count > 0 THEN
         EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP CONSTRAINT fk_envios_comuna_destino';
     END IF;
 
-    SELECT COUNT(*) INTO v_count FROM USER_INDEXES WHERE index_name = 'IDX_ENVIOS_COMUNA_ORIGEN';
+    SELECT COUNT(*) INTO v_count FROM ALL_INDEXES WHERE owner = 'USER_ENVIOS' AND index_name = 'IDX_ENVIOS_COMUNA_ORIGEN';
     IF v_count > 0 THEN
         EXECUTE IMMEDIATE 'DROP INDEX USER_ENVIOS.idx_envios_comuna_origen';
     END IF;
 
-    SELECT COUNT(*) INTO v_count FROM USER_INDEXES WHERE index_name = 'IDX_ENVIOS_COMUNA_DESTINO';
+    SELECT COUNT(*) INTO v_count FROM ALL_INDEXES WHERE owner = 'USER_ENVIOS' AND index_name = 'IDX_ENVIOS_COMUNA_DESTINO';
     IF v_count > 0 THEN
         EXECUTE IMMEDIATE 'DROP INDEX USER_ENVIOS.idx_envios_comuna_destino';
     END IF;
@@ -172,8 +174,8 @@ DECLARE
     v_cols NUMBER := 0;
 BEGIN
     SELECT COUNT(*) INTO v_cols
-    FROM USER_TAB_COLS
-    WHERE table_name = 'ENVIOS' AND column_name = 'CALLE_ORIGEN';
+    FROM ALL_TAB_COLS
+    WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS' AND column_name = 'CALLE_ORIGEN';
 
     IF v_cols > 0 THEN
         EXECUTE IMMEDIATE '
