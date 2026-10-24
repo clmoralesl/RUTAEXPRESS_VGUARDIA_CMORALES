@@ -69,6 +69,26 @@ RUTAEXPRESS_REPORTES_URL=http://ms-rutaexpress-reportes:8086
 RUTAEXPRESS_ENVIOS_URL=http://ms-rutaexpress-envios:8081
 RUTAEXPRESS_NOTIFICACIONES_URL=http://ms-rutaexpress-notificaciones:8083
 CATALOGO_SERVICE_URL=http://ms-rutaexpress-catalogo:8082
+
+# Oracle Cloud Database Configuration
+ORACLE_DB_URL=jdbc:oracle:thin:@rutaexpressdb_high?TNS_ADMIN=/opt/oracle/wallet
+ORACLE_WALLET_LOCATION=/opt/oracle/wallet
+
+# Esquema 1: Envios
+ORACLE_ENVIOS_USERNAME=USER_ENVIOS
+ORACLE_ENVIOS_PASSWORD=Despacho.Seguro2026#Env
+
+# Esquema 2: Catalogo
+ORACLE_CATALOGO_USERNAME=USER_CATALOGO
+ORACLE_CATALOGO_PASSWORD=Flota.Servicios2026#Cat
+
+# Esquema 3: Auditoria
+ORACLE_AUDITORIA_USERNAME=USER_AUDITORIA
+ORACLE_AUDITORIA_PASSWORD=Control.Eventos2026#Aud
+
+# Alias Generico
+ORACLE_DB_USERNAME=USER_ENVIOS
+ORACLE_DB_PASSWORD=Despacho.Seguro2026#Env
 EOF
 cp /opt/rutaexpress/.env /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/.env
 

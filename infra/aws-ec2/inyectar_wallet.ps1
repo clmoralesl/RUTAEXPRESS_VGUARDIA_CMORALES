@@ -54,7 +54,7 @@ $remoteCmd = "sudo mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra
              "sudo chmod 644 /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet/* && " + `
              "sudo rm -f /tmp/Wallet_rutaexpressdb.zip && " + `
              "echo 'Wallet desplegado. Reiniciando microservicios dependientes de Oracle...' && " + `
-             "sudo docker compose -f /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/apps/compose.yml restart ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-auditoria ms-rutaexpress-bff && " + `
+             "sudo docker compose -f /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/apps/compose.yml up -d ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-auditoria ms-rutaexpress-bff && " + `
              "echo 'Microservicios reconectados exitosamente a Oracle Cloud.'"
 
 & ssh -o StrictHostKeyChecking=no -i "$KeyPath" "ubuntu@${Ec2Host}" "$remoteCmd"
