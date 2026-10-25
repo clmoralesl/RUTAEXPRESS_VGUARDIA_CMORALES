@@ -68,3 +68,8 @@ infra/oracle/wallet/
 terraform.tfvars
 GUIA_REDESPLIEGUE_AWS_ACADEMY.md
 CLASE_MAGISTRAL_RUTAEXPRESS.md
+
+# Archivos de colaboracion entre agentes y reglas de agentes (uso local, no versionar)
+colaboracion/
+CLAUDE.md
+.claude/
