@@ -2,7 +2,7 @@
 -- Script: 02_schema_envios.sql
 -- Descripción: Definición DDL de tablas, restricciones e índices para el esquema USER_ENVIOS.
 -- Microservicio: ms-rutaexpress-envios
--- Proyecto: RutaExpress (Normalizado Issue #57)
+-- Proyecto: RutaExpress (Normalizado Issue #57, Propietario Issue #69)
 -- Conexión: Diseñado para ejecutarse conectado como ADMIN (o como USER_ENVIOS).
 -- =============================================================================
 
@@ -36,6 +36,8 @@ CREATE TABLE USER_ENVIOS.ENVIOS (
     id_comuna_destino   NUMBER(5) NOT NULL,
     peso_kg             NUMBER(10,2) NOT NULL,
     estado              VARCHAR2(30) NOT NULL,
+    creado_por_oid      VARCHAR2(36),
+    creado_por_email    VARCHAR2(320),
     fecha_creacion      TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     
@@ -72,6 +74,8 @@ COMMENT ON COLUMN USER_ENVIOS.ENVIOS.complemento_destino IS 'Depto, oficina, blo
 COMMENT ON COLUMN USER_ENVIOS.ENVIOS.id_comuna_destino IS 'Código CUT oficial de la comuna de destino';
 COMMENT ON COLUMN USER_ENVIOS.ENVIOS.peso_kg IS 'Peso total del paquete expresado en Kilogramos';
 COMMENT ON COLUMN USER_ENVIOS.ENVIOS.estado IS 'Estado actual del ciclo de vida: CREADO, ACEPTADO, EN_BODEGA, EN_RUTA, ENTREGADO, CANCELADO';
+COMMENT ON COLUMN USER_ENVIOS.ENVIOS.creado_por_oid IS 'Identificador (oid) del usuario de Entra ID que creo el envio';
+COMMENT ON COLUMN USER_ENVIOS.ENVIOS.creado_por_email IS 'Correo del creador, informativo y opcional';
 COMMENT ON COLUMN USER_ENVIOS.ENVIOS.fecha_creacion IS 'Fecha y hora exacta de registro inicial en el sistema';
 COMMENT ON COLUMN USER_ENVIOS.ENVIOS.fecha_actualizacion IS 'Fecha y hora del último cambio de estado o modificación';
 
@@ -81,5 +85,6 @@ CREATE INDEX USER_ENVIOS.idx_envios_rut_remitente ON USER_ENVIOS.ENVIOS (rut_rem
 CREATE INDEX USER_ENVIOS.idx_envios_estado ON USER_ENVIOS.ENVIOS (estado);
 CREATE INDEX USER_ENVIOS.idx_envios_comuna_origen ON USER_ENVIOS.ENVIOS (id_comuna_origen);
 CREATE INDEX USER_ENVIOS.idx_envios_comuna_destino ON USER_ENVIOS.ENVIOS (id_comuna_destino);
+CREATE INDEX USER_ENVIOS.idx_envios_creado_por_oid ON USER_ENVIOS.ENVIOS (creado_por_oid);
 
 COMMIT;

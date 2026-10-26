@@ -55,6 +55,8 @@ mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet
 echo "Directorio de wallet preparado. La inyeccion de certificados se realiza post-arranque."
 
 echo "=== [3/6] Escribiendo variables de entorno unificadas (.env) ==="
+RUTAEXPRESS_SECRETO_INTERNO="${RUTAEXPRESS_SECRETO_INTERNO:-$(openssl rand -hex 32)}"
+
 cat << EOF > /opt/rutaexpress/.env
 SPRING_PROFILES_ACTIVE=prod
 SPRING_RABBITMQ_HOST=$RABBITMQ_HOST
@@ -89,6 +91,9 @@ ORACLE_AUDITORIA_PASSWORD=Control.Eventos2026#Aud
 # Alias Generico
 ORACLE_DB_USERNAME=USER_ENVIOS
 ORACLE_DB_PASSWORD=Despacho.Seguro2026#Env
+
+# Secreto Compartido entre Microservicios Internos (BFF y ms-rutaexpress-envios)
+RUTAEXPRESS_SECRETO_INTERNO=$RUTAEXPRESS_SECRETO_INTERNO
 EOF
 cp /opt/rutaexpress/.env /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/.env
 
