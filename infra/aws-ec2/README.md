@@ -101,3 +101,26 @@ Este modulo (`infra/aws-ec2`) implementa la infraestructura como codigo (Terrafo
    - Abrir en el navegador: `https://<ec2_apps_public_ip>/salud-proxy`
    - Monitorear RabbitMQ: `http://<ec2_mq_public_ip>:15672/`
    - Monitorear Kafka: `http://<ec2_kafka_public_ip>:8085/`
+
+5. **Inyectar el Oracle Wallet**:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File infra/aws-ec2/inyectar_wallet.ps1 -KeyPath <ruta-a-labsuser.pem>
+   ```
+   El script copia el wallet a `ec2-apps`, recrea envios, catalogo, auditoria y BFF, y verifica que los cuatro contenedores queden en ejecucion con su nombre normal. Termina con codigo 0 si todo queda bien y con un codigo distinto de 0 (y un mensaje en rojo) si falla `scp`, `ssh` o algun contenedor no queda en ejecucion.
+
+---
+
+## Recuperacion tras una inyeccion interrumpida
+
+Si una recreacion de contenedores se corta a mitad (por ejemplo, porque se perdio la sesion SSH), los servicios pueden quedar detenidos o con nombres temporales del tipo `<id>_ms-rutaexpress-envios`.
+
+1. Diagnosticar desde `ec2-apps`:
+   ```bash
+   sudo docker ps -a --format '{{.Names}} {{.Status}}'
+   ```
+2. Recrear los cuatro servicios con las imagenes ya construidas (sin compilar de nuevo):
+   ```bash
+   cd /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES
+   sudo docker compose -f infra/apps/compose.yml up -d --no-build --force-recreate ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-auditoria ms-rutaexpress-bff
+   ```
+3. Repetir el paso 1 y confirmar que los cuatro aparecen como `Up` con su nombre normal.
