@@ -16,6 +16,8 @@ Antes de iniciar el redespliegue, verificar que se encuentren disponibles los si
 > [!NOTE]
 > Ambos archivos se encuentran estrictamente protegidos mediante `.gitignore` para prevenir cualquier exposicion en el historial de Git.
 
+Ademas, se requieren las contrasenas de los esquemas `USER_ENVIOS`, `USER_CATALOGO` y `USER_AUDITORIA` de Oracle ATP. No se versionan: se entregan a Terraform en el Paso 3.
+
 ---
 
 ## 2. Paso a Paso de Ejecucion
@@ -45,9 +47,32 @@ $env:AWS_DEFAULT_REGION="us-east-1"
 ```
 
 ### Paso 3: Aprovisionar Infraestructura con Terraform
-Navegar al directorio de Terraform para EC2 y aplicar los cambios:
+Navegar al directorio de Terraform para EC2:
 ```powershell
 cd infra\aws-ec2
+```
+
+**Entregar las credenciales de Oracle ATP.** `scripts/bootstrap-apps.sh` no contiene contrasenas: las recibe de Terraform mediante las variables sensibles `oracle_envios_password`, `oracle_catalogo_password` y `oracle_auditoria_password` (definidas en `variables.tf`, sin valor por defecto). Usar una de estas dos opciones:
+
+* **Opcion A (recomendada): archivo `terraform.tfvars`**, excluido de Git por `.gitignore`.
+  ```powershell
+  Copy-Item terraform.tfvars.example terraform.tfvars
+  # Editar terraform.tfvars y reemplazar los tres valores ficticios por los reales
+  ```
+* **Opcion B: variables de entorno de la sesion de PowerShell** (no quedan en disco):
+  ```powershell
+  $env:TF_VAR_oracle_envios_password="..."
+  $env:TF_VAR_oracle_catalogo_password="..."
+  $env:TF_VAR_oracle_auditoria_password="..."
+  ```
+
+Reglas de las contrasenas: entre 12 y 30 caracteres y solo letras, digitos, guion bajo (`_`), guion (`-`), punto (`.`) o numeral (`#`). La restriccion existe porque el script escribe el `.env` con un heredoc de bash sin comillas, que alteraria caracteres como `$`, el acento grave, `\` o las comillas; los espacios se excluyen porque un `#` precedido de espacio se interpreta como comentario en el `.env`. Si un valor no cumple, Terraform se detiene con un error de validacion antes de crear recursos. Si falta alguna variable, `terraform apply` la solicita por consola, y `terraform plan -input=false` falla indicando cual falta.
+
+> [!NOTE]
+> Terraform muestra el `user_data` de `ec2-apps` como `(sensitive value)`, pero lo guarda en texto plano en `terraform.tfstate` (excluido de Git) y es legible desde la consola de EC2 y el servicio de metadatos de la instancia. Es una limitacion aceptada del laboratorio: AWS Academy restringe el uso de un gestor de secretos.
+
+Aplicar los cambios:
+```powershell
 
 # Inicializar proveedores y modulos
 terraform init
@@ -123,7 +148,7 @@ Actua como ingeniero DevOps y redespliega el entorno completo de RutaExpress en 
 Instrucciones estrictas a ejecutar en orden:
 1. Comprueba la existencia de los archivos locales 'infra/labsuser.pem' e 'infra/oracle/Wallet_rutaexpressdb.zip'.
 2. Verifica que las credenciales de sesion de AWS ($env:AWS_ACCESS_KEY_ID, $env:AWS_SECRET_ACCESS_KEY, $env:AWS_SESSION_TOKEN) esten presentes con region 'us-east-1'.
-3. Ubicate en 'infra/aws-ec2', ejecuta 'terraform init' y 'terraform apply -auto-approve'.
+3. Ubicate en 'infra/aws-ec2' y verifica que exista 'terraform.tfvars' con 'oracle_envios_password', 'oracle_catalogo_password' y 'oracle_auditoria_password', o las variables de entorno 'TF_VAR_' equivalentes; si faltan, detente y solicitalas al usuario sin mostrar sus valores. Luego ejecuta 'terraform init' y 'terraform apply -auto-approve'.
 4. Extrae de las salidas de Terraform las variables 'ec2_apps_public_ip', 'ec2_mq_public_ip', 'ec2_kafka_public_ip' y 'api_gateway_endpoint'.
 5. Solicita al usuario registrar 'https://<ec2_apps_public_ip>/' en Azure Portal (Microsoft Entra ID > Registros de aplicaciones > Client ID 853e11cd-e801-4317-96e7-bda1c6dd8d74 > Autenticacion > SPA URIs) y espera confirmacion.
 6. Ejecuta '.\inyectar_wallet.ps1' para transferir la billetera de Oracle ATP y reiniciar los contenedores dependientes.
@@ -138,6 +163,10 @@ Instrucciones estrictas a ejecutar en orden:
   * Al ingresar a `https://<ec2_apps_public_ip>/`, hacer clic en **Configuracion avanzada** > **Continuar a <IP> (no seguro)**. Es el comportamiento esperado para entornos de laboratorio con terminacion TLS en Nginx.
 * **Error de Autenticacion en Azure (`AADSTS50011: The redirect URI does not match`)**:
   * Ocurre si no se agrego la nueva IP publica generada por Terraform en las URIs de redireccion de Azure Portal. Repetir el Paso 4 asegurandose de incluir la barra inclinada final (`/`).
+* **Error `Invalid value for variable` o `No value for required variable` en `terraform apply`**:
+  * Falta una contrasena de Oracle o no cumple las reglas del Paso 3. Revisar `terraform.tfvars` o las variables `TF_VAR_`. Si fue necesario cambiar una contrasena en Oracle ATP, elegirla dentro del conjunto de caracteres permitido.
+* **Un microservicio no conecta a Oracle (`ORA-01017: invalid username/password`)**:
+  * La contrasena entregada a Terraform no coincide con la vigente en Oracle ATP. Corregir el valor y recrear la instancia con `terraform apply -replace="aws_instance.ec2_apps"` (un `apply` simple no vuelve a ejecutar el script de arranque, y luego hay que repetir los Pasos 4 y 5 porque cambia la IP), o editar `/opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/.env` en la instancia y reiniciar el contenedor afectado.
 * **Verificacion del Estado de Contenedores via SSH**:
   ```powershell
   ssh -i infra/labsuser.pem ubuntu@<ec2_apps_public_ip> "sudo docker ps"
