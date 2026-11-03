@@ -55,7 +55,7 @@ mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet
 echo "Directorio de wallet preparado. La inyeccion de certificados se realiza post-arranque."
 
 echo "=== [3/6] Escribiendo variables de entorno unificadas (.env) ==="
-RUTAEXPRESS_SECRETO_INTERNO="${RUTAEXPRESS_SECRETO_INTERNO:-$(openssl rand -hex 32)}"
+RUTAEXPRESS_SECRETO_INTERNO="$${RUTAEXPRESS_SECRETO_INTERNO:-$(openssl rand -hex 32)}"
 
 cat << EOF > /opt/rutaexpress/.env
 SPRING_PROFILES_ACTIVE=prod
