@@ -1,0 +1,14 @@
+# ==============================================================================
+# Plantilla de parametros locales para el despliegue AWS (Issue #94)
+# Copiar como terraform.tfvars (excluido de Git) y reemplazar los valores
+# ficticios por los reales. Nunca versionar terraform.tfvars.
+# ==============================================================================
+
+# Opcional: nombre del Key Pair de AWS (por defecto rutaexpress-key)
+# ssh_key_name = "vockey"
+
+# Contrasenas de Oracle ATP (obligatorias, sin valor por defecto).
+# Reglas: entre 12 y 30 caracteres; solo letras, digitos, guion bajo, guion, punto o numeral.
+oracle_envios_password    = "CAMBIAR_contrasena_envios_1"
+oracle_catalogo_password  = "CAMBIAR_contrasena_catalogo_1"
+oracle_auditoria_password = "CAMBIAR_contrasena_auditoria_1"

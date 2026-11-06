@@ -67,3 +67,46 @@ variable "allowed_admin_cidr" {
   type        = string
   default     = "0.0.0.0/0"
 }
+
+# ==============================================================================
+# Credenciales de Oracle ATP (Issue #94)
+# Sin valor por defecto: se entregan en terraform.tfvars (excluido de Git) o con
+# variables de entorno TF_VAR_<nombre>. Ver terraform.tfvars.example.
+# El conjunto de caracteres es restringido porque bootstrap-apps.sh escribe el
+# .env con un heredoc sin comillas: bash alteraria $, acento grave, \ o comillas.
+# Los espacios se excluyen porque un # precedido de espacio inicia un comentario
+# en el .env que lee Docker Compose.
+# ==============================================================================
+
+variable "oracle_envios_password" {
+  description = "Contrasena de USER_ENVIOS en Oracle ATP (tambien usada por ORACLE_DB_PASSWORD)"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.#-]{12,30}$", var.oracle_envios_password))
+    error_message = "oracle_envios_password debe tener entre 12 y 30 caracteres y usar solo letras, digitos, guion bajo, guion, punto o numeral."
+  }
+}
+
+variable "oracle_catalogo_password" {
+  description = "Contrasena de USER_CATALOGO en Oracle ATP"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.#-]{12,30}$", var.oracle_catalogo_password))
+    error_message = "oracle_catalogo_password debe tener entre 12 y 30 caracteres y usar solo letras, digitos, guion bajo, guion, punto o numeral."
+  }
+}
+
+variable "oracle_auditoria_password" {
+  description = "Contrasena de USER_AUDITORIA en Oracle ATP"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.#-]{12,30}$", var.oracle_auditoria_password))
+    error_message = "oracle_auditoria_password debe tener entre 12 y 30 caracteres y usar solo letras, digitos, guion bajo, guion, punto o numeral."
+  }
+}
