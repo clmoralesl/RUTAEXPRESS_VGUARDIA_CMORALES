@@ -103,7 +103,15 @@ foreach ($q in $expectedQueues) {
     }
 
     if ($q.IsDlq) {
-        Write-Success "Cola DLQ '$($q.Name)' [Durable: $($found.durable), TTL: $($found.arguments.'x-message-ttl') ms] activa."
+        $dlqTtl = $found.arguments.'x-message-ttl'
+        $dlqMaxLen = $found.arguments.'x-max-length'
+        $dlqDlx = $found.arguments.'x-dead-letter-exchange'
+        if ($dlqTtl -eq 604800000 -and $dlqMaxLen -eq 50000 -and -not $dlqDlx) {
+            Write-Success "Cola DLQ '$($q.Name)' [Durable: $($found.durable), TTL: $dlqTtl ms, MaxLength: $dlqMaxLen] activa."
+        } else {
+            Write-Failure "Cola DLQ '$($q.Name)' tiene argumentos incorrectos: TTL=$dlqTtl, MaxLength=$dlqMaxLen, DLX=$dlqDlx (se esperaba TTL=604800000, MaxLength=50000 y sin DLX)."
+            exit 1
+        }
     } else {
         $dlx = $found.arguments.'x-dead-letter-exchange'
         $dlk = $found.arguments.'x-dead-letter-routing-key'
@@ -113,7 +121,7 @@ foreach ($q in $expectedQueues) {
         if ($dlx -eq "cmd.dead.dlx" -and $dlk -eq $q.Dlk -and $ttl -eq 86400000 -and $maxLen -eq 10000) {
             Write-Success "Cola Principal '$($q.Name)' [DLX: $dlx, DLK: $dlk, TTL: $ttl ms, MaxLength: $maxLen] configurada correctamente."
         } else {
-            Write-Failure "Cola '$($q.Name)' tiene argumentos DLX incorrectos: DLX=$dlx, DLK=$dlk."
+            Write-Failure "Cola '$($q.Name)' tiene argumentos incorrectos: DLX=$dlx, DLK=$dlk, TTL=$ttl, MaxLength=$maxLen."
             exit 1
         }
     }
@@ -131,7 +139,13 @@ $keyBindings = @(
     @{ Source = "cmd.topic"; Dest = "q.cmd.label"; Key = "label.*" },
     @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.email.dlq"; Key = "email.dead" },
     @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.warehouse.dlq"; Key = "warehouse.dead" },
-    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.label.dlq"; Key = "label.dead" }
+    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.label.dlq"; Key = "label.dead" },
+    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.email.dlq"; Key = "email.send" },
+    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.email.dlq"; Key = "q.cmd.email.dlq" },
+    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.warehouse.dlq"; Key = "warehouse.ticket" },
+    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.warehouse.dlq"; Key = "q.cmd.warehouse.dlq" },
+    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.label.dlq"; Key = "label.gen" },
+    @{ Source = "cmd.dead.dlx"; Dest = "q.cmd.label.dlq"; Key = "q.cmd.label.dlq" }
 )
 
 foreach ($b in $keyBindings) {

@@ -71,6 +71,53 @@ if ($has6Queues) {
     Write-Host "  [ERROR] Faltan colas o exchanges en bootstrap-mq.sh." -ForegroundColor Red
 }
 
+# 3.1 Comparacion estructural entre infra/mq/definitions.json y el JSON embebido en bootstrap-mq.sh (issue #99)
+$defLocalPath = Join-Path $scriptDir "../mq/definitions.json"
+$bloqueMq = [regex]::Match($mqContent, "(?s)cat << 'EOF' > definitions\.json\r?\n(.*?)\r?\nEOF")
+if (-not $bloqueMq.Success -or -not (Test-Path $defLocalPath)) {
+    Write-Host "  [ERROR] No se pudo extraer el definitions.json embebido o falta infra/mq/definitions.json." -ForegroundColor Red
+} else {
+    $defAws   = $bloqueMq.Groups[1].Value | ConvertFrom-Json
+    $defLocal = Get-Content -Path $defLocalPath -Raw | ConvertFrom-Json
+
+    function Get-ArgumentoTopologia($cola, $nombre) {
+        $valor = $cola.arguments.$nombre
+        if ($null -eq $valor) { return "-" }
+        return [string]$valor
+    }
+
+    function Get-FirmasTopologia($def) {
+        $firmas = @()
+        foreach ($e in $def.exchanges) {
+            $firmas += "exchange|$($e.name)|$($e.type)|$($e.durable)"
+        }
+        foreach ($q in $def.queues) {
+            $tipo = if ($q.type) { $q.type } else { "classic" }
+            $firmas += ("queue|{0}|{1}|{2}|{3}|{4}|{5}|{6}" -f $q.name, $tipo, $q.durable,
+                (Get-ArgumentoTopologia $q "x-dead-letter-exchange"),
+                (Get-ArgumentoTopologia $q "x-dead-letter-routing-key"),
+                (Get-ArgumentoTopologia $q "x-message-ttl"),
+                (Get-ArgumentoTopologia $q "x-max-length"))
+        }
+        foreach ($b in $def.bindings) {
+            $firmas += "binding|$($b.source)|$($b.destination)|$($b.routing_key)"
+        }
+        return $firmas
+    }
+
+    $firmasAws   = @(Get-FirmasTopologia $defAws)
+    $firmasLocal = @(Get-FirmasTopologia $defLocal)
+    $soloLocal = @($firmasLocal | Where-Object { $firmasAws -notcontains $_ })
+    $soloAws   = @($firmasAws | Where-Object { $firmasLocal -notcontains $_ })
+
+    if ($soloLocal.Count -eq 0 -and $soloAws.Count -eq 0) {
+        Write-Host "  [OK] La topologia de bootstrap-mq.sh coincide con infra/mq/definitions.json ($($firmasLocal.Count) elementos)." -ForegroundColor Green
+    } else {
+        foreach ($f in $soloLocal) { Write-Host "  [ERROR] Falta en bootstrap-mq.sh: $f" -ForegroundColor Red }
+        foreach ($f in $soloAws)   { Write-Host "  [ERROR] Sobra en bootstrap-mq.sh o difiere de definitions.json: $f" -ForegroundColor Red }
+    }
+}
+
 if ($hasKafkaTopics) {
     Write-Host "  [OK] Script bootstrap-kafka.sh aprovisiona Zookeeper, Kafka, Kafka UI y topicos estructurados." -ForegroundColor Green
 } else {
