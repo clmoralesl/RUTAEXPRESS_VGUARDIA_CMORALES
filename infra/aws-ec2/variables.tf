@@ -110,3 +110,30 @@ variable "oracle_auditoria_password" {
     error_message = "oracle_auditoria_password debe tener entre 12 y 30 caracteres y usar solo letras, digitos, guion bajo, guion, punto o numeral."
   }
 }
+
+# ==============================================================================
+# JWT Authorizer del API Gateway con Microsoft Entra ID (Issue #101)
+# El emisor y la audiencia deben coincidir con los que valida el BFF (issue #95).
+# Tokens de la API en formato v1.0: iss = https://sts.windows.net/<tenant>/
+# ==============================================================================
+
+variable "azure_ad_tenant_id" {
+  description = "ID del tenant de Microsoft Entra ID que emite los tokens (GUID). Sin valor por defecto: se entrega en terraform.tfvars o TF_VAR_azure_ad_tenant_id"
+  type        = string
+
+  validation {
+    condition     = can(regex("^(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.azure_ad_tenant_id))
+    error_message = "azure_ad_tenant_id debe ser un GUID (formato xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)."
+  }
+}
+
+variable "api_audiencias_jwt" {
+  description = "Audiencias (claim aud) aceptadas por el JWT Authorizer. Tokens v1.0 de la API de RutaExpress usan el App ID URI"
+  type        = list(string)
+  default     = ["api://a55c035c-76ef-4ddf-ab9a-545d90386f03"]
+
+  validation {
+    condition     = length(var.api_audiencias_jwt) > 0 && alltrue([for a in var.api_audiencias_jwt : length(trimspace(a)) > 0])
+    error_message = "api_audiencias_jwt debe contener al menos una audiencia no vacia."
+  }
+}
