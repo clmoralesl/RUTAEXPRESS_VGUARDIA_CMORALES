@@ -37,7 +37,7 @@ management.tcp.port = 15672
 management.load_definitions = /etc/rabbitmq/definitions.json
 EOF
 
-# Generacion de topologia de 6 colas, 3 exchanges y DLQ
+# Topologia identica a infra/mq/definitions.json (issue #99)
 cat << 'EOF' > definitions.json
 {
   "rabbit_version": "3.13.0",
@@ -98,9 +98,12 @@ cat << 'EOF' > definitions.json
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
+      "type": "classic",
       "arguments": {
         "x-dead-letter-exchange": "cmd.dead.dlx",
-        "x-dead-letter-routing-key": "email.dead"
+        "x-dead-letter-routing-key": "email.dead",
+        "x-message-ttl": 86400000,
+        "x-max-length": 10000
       }
     },
     {
@@ -108,16 +111,23 @@ cat << 'EOF' > definitions.json
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": {}
+      "type": "classic",
+      "arguments": {
+        "x-message-ttl": 604800000,
+        "x-max-length": 50000
+      }
     },
     {
       "name": "q.cmd.warehouse",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
+      "type": "classic",
       "arguments": {
         "x-dead-letter-exchange": "cmd.dead.dlx",
-        "x-dead-letter-routing-key": "warehouse.dead"
+        "x-dead-letter-routing-key": "warehouse.dead",
+        "x-message-ttl": 86400000,
+        "x-max-length": 10000
       }
     },
     {
@@ -125,16 +135,23 @@ cat << 'EOF' > definitions.json
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": {}
+      "type": "classic",
+      "arguments": {
+        "x-message-ttl": 604800000,
+        "x-max-length": 50000
+      }
     },
     {
       "name": "q.cmd.label",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
+      "type": "classic",
       "arguments": {
         "x-dead-letter-exchange": "cmd.dead.dlx",
-        "x-dead-letter-routing-key": "label.dead"
+        "x-dead-letter-routing-key": "label.dead",
+        "x-message-ttl": 86400000,
+        "x-max-length": 10000
       }
     },
     {
@@ -142,7 +159,11 @@ cat << 'EOF' > definitions.json
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": {}
+      "type": "classic",
+      "arguments": {
+        "x-message-ttl": 604800000,
+        "x-max-length": 50000
+      }
     }
   ],
   "bindings": [
@@ -171,6 +192,22 @@ cat << 'EOF' > definitions.json
       "arguments": {}
     },
     {
+      "source": "cmd.dead.dlx",
+      "vhost": "/",
+      "destination": "q.cmd.email.dlq",
+      "destination_type": "queue",
+      "routing_key": "email.send",
+      "arguments": {}
+    },
+    {
+      "source": "cmd.dead.dlx",
+      "vhost": "/",
+      "destination": "q.cmd.email.dlq",
+      "destination_type": "queue",
+      "routing_key": "q.cmd.email.dlq",
+      "arguments": {}
+    },
+    {
       "source": "cmd.topic",
       "vhost": "/",
       "destination": "q.cmd.warehouse",
@@ -195,6 +232,22 @@ cat << 'EOF' > definitions.json
       "arguments": {}
     },
     {
+      "source": "cmd.dead.dlx",
+      "vhost": "/",
+      "destination": "q.cmd.warehouse.dlq",
+      "destination_type": "queue",
+      "routing_key": "warehouse.ticket",
+      "arguments": {}
+    },
+    {
+      "source": "cmd.dead.dlx",
+      "vhost": "/",
+      "destination": "q.cmd.warehouse.dlq",
+      "destination_type": "queue",
+      "routing_key": "q.cmd.warehouse.dlq",
+      "arguments": {}
+    },
+    {
       "source": "cmd.topic",
       "vhost": "/",
       "destination": "q.cmd.label",
@@ -216,6 +269,22 @@ cat << 'EOF' > definitions.json
       "destination": "q.cmd.label.dlq",
       "destination_type": "queue",
       "routing_key": "label.dead",
+      "arguments": {}
+    },
+    {
+      "source": "cmd.dead.dlx",
+      "vhost": "/",
+      "destination": "q.cmd.label.dlq",
+      "destination_type": "queue",
+      "routing_key": "label.gen",
+      "arguments": {}
+    },
+    {
+      "source": "cmd.dead.dlx",
+      "vhost": "/",
+      "destination": "q.cmd.label.dlq",
+      "destination_type": "queue",
+      "routing_key": "q.cmd.label.dlq",
       "arguments": {}
     }
   ]
