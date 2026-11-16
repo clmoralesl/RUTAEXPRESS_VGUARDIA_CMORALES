@@ -33,8 +33,17 @@ output "ec2_kafka_private_ip" {
 }
 
 output "api_gateway_url" {
-  description = "URL publica de AWS API Gateway (HTTP API) con CORS gestionado nativamente en AWS"
+  description = "URL publica de AWS API Gateway (HTTP API) con CORS nativo y JWT Authorizer de Entra"
   value       = aws_apigatewayv2_stage.default_stage.invoke_url
+}
+
+output "jwt_authorizer" {
+  description = "Parametros del JWT Authorizer (no sensibles) para la guia de demostracion"
+  value = {
+    emisor     = local.jwt_emisor_entra
+    audiencias = var.api_audiencias_jwt
+    log_group  = aws_cloudwatch_log_group.api_gateway_accesos.name
+  }
 }
 
 output "urls_acceso" {

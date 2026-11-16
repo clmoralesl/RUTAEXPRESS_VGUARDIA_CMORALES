@@ -12,3 +12,10 @@
 oracle_envios_password    = "CAMBIAR_contrasena_envios_1"
 oracle_catalogo_password  = "CAMBIAR_contrasena_catalogo_1"
 oracle_auditoria_password = "CAMBIAR_contrasena_auditoria_1"
+
+# Tenant de Microsoft Entra ID que emite los tokens (obligatorio, issue #101).
+# Se obtiene en Entra ID > Informacion general > Id. de inquilino.
+azure_ad_tenant_id = "00000000-0000-0000-0000-000000000000"
+
+# Opcional: audiencias aceptadas por el JWT Authorizer (por defecto el App ID URI de la API)
+# api_audiencias_jwt = ["api://a55c035c-76ef-4ddf-ab9a-545d90386f03"]

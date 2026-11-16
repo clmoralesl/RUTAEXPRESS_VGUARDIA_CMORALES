@@ -52,6 +52,7 @@ Este modulo (`infra/aws-ec2`) implementa la infraestructura como codigo (Terrafo
 | Security Group | Puerto / Protocolo | Origen Autorizado | Proposito |
 | :--- | :--- | :--- | :--- |
 | **`sg_ec2_apps`** | `443/TCP` (HTTPS) | `0.0.0.0/0` (Internet) | Trafico seguro cifrado hacia Nginx Reverse Proxy y MSAL |
+| | `8080/TCP` (HTTP) | `0.0.0.0/0` (Internet) | Integracion HTTP_PROXY del API Gateway hacia ms-rutaexpress-bff |
 | | `80/TCP` (HTTP) | `0.0.0.0/0` (Internet) | Redireccion permanente HTTP 301 a HTTPS |
 | | `22/TCP` (SSH) | `var.allowed_admin_cidr` | Gestion y administracion tecnica remota |
 | **`sg_ec2_mq`** | `5672/TCP` (AMQP) | **`sg_ec2_apps` (Exclusivo)** | Aislamiento estricto: solo el backend produce/consume colas |
@@ -107,6 +108,66 @@ Este modulo (`infra/aws-ec2`) implementa la infraestructura como codigo (Terrafo
    powershell -ExecutionPolicy Bypass -File infra/aws-ec2/inyectar_wallet.ps1 -KeyPath <ruta-a-labsuser.pem>
    ```
    El script copia el wallet a `ec2-apps`, recrea envios, catalogo, auditoria y BFF, y verifica que los cuatro contenedores queden en ejecucion con su nombre normal. Termina con codigo 0 si todo queda bien y con un codigo distinto de 0 (y un mensaje en rojo) si falla `scp`, `ssh` o algun contenedor no queda en ejecucion.
+
+---
+
+## API Gateway y JWT Authorizer (issue #101)
+
+El API Gateway (HTTP API) valida el token de Microsoft Entra ID antes de reenviar la peticion al BFF.
+
+- **Rutas protegidas por defecto:** `GET|POST|PUT|PATCH|DELETE /{proxy+}` exigen token (autorizador JWT). Una ruta nueva del BFF nace protegida: si no se declara como publica, responde 401 (denegacion por defecto).
+- **Rutas publicas:** `GET|POST /api/publico/{proxy+}` no tienen autorizador y usan una segunda integracion (`/api/publico/{proxy}`), porque en esa ruta `{proxy}` captura solo lo que sigue al prefijo.
+- **Emisor y audiencia:** tokens v1.0, emisor `https://sts.windows.net/<tenant>/` (con barra final, tenant en minusculas) y audiencia `api://a55c035c-76ef-4ddf-ab9a-545d90386f03`. Se parametrizan con `azure_ad_tenant_id` (obligatoria, sin valor por defecto) y `api_audiencias_jwt`. Deben coincidir exactamente con los que configure el BFF (issue #95).
+- **Autenticacion y autorizacion:** el Gateway valida firma, emisor, audiencia y vigencia (401 si falla). Los roles los valida el BFF (403 si el rol no alcanza). El Gateway reenvia `Authorization` y el BFF vuelve a validar el token.
+- **Preflight `OPTIONS`:** la responde el CORS nativo del Gateway sin token (204). Esta prohibido agregar rutas `OPTIONS`, `ANY` o `$default`, porque exigirian token a la preflight y el navegador bloquearia todas las llamadas.
+- **CORS con cabeceras explicitas:** `allow_headers = ["authorization", "content-type"]`. Segun el estandar Fetch, el comodin no cubre `Authorization`, por lo que debe nombrarse. Si el frontend agrega una cabecera propia nueva, hay que agregarla en `api_gateway.tf`.
+- **Registro de acceso:** el stage escribe en el grupo de CloudWatch `/aws/apigateway/<project_name>-api-gateway` (retencion de 7 dias) el estado, `integrationStatus` y el error del autorizador. No registra cabeceras ni tokens. Un rechazo del Gateway muestra `integrationStatus = "-"`. Si `terraform apply` falla por permisos de CloudWatch en AWS Academy, retirar `access_log_settings` y el grupo de registros, y distinguir el origen del 401 por el cuerpo: el Gateway responde `{"message":"Unauthorized"}` y el BFF responde cuerpo vacio con `WWW-Authenticate: Bearer`.
+
+### Limitaciones declaradas
+
+- **Acceso directo al BFF:** el BFF tambien es alcanzable por `http://<ip>:8080` y `https://<ip>/api/` sin pasar por el Gateway. El BFF sigue validando firma y roles, pero la validacion de emisor y audiencia en el borde se omite por esas vias hasta cerrar el issue #95. Alternativas futuras: VPC Link con un balanceador privado y cierre del puerto 8080, o una cabecera secreta inyectada por el Gateway y verificada por el BFF.
+- **Token sin renovacion en el frontend:** `catalogo`, `auditoria` y `reportes` adjuntan el token guardado en `sessionStorage['access_token']`, obtenido una sola vez al volver del login. Tras su expiracion (60 a 90 minutos) reciben 401, ahora emitido por el Gateway. Es una limitacion preexistente que requiere un issue aparte en el frontend.
+- **Desfase de reloj:** cerca de `exp`, el Gateway puede rechazar un token que el BFF aun aceptaria (tolerancia de 60 s en Spring).
+
+### Guia de demostracion con curl (PowerShell)
+
+No usar `--insecure` contra el Gateway: tiene certificado valido de AWS. El token nunca se pega en la consola ni en archivos.
+
+```powershell
+$gw = terraform -chdir=infra/aws-ec2 output -raw api_gateway_url
+
+# 1. Sin token: 401 del Gateway, cuerpo {"message":"Unauthorized"}
+curl.exe -s -i "$gw/api/bff/envios"
+
+# 2. Token alterado: 401 del Gateway
+#    Copiar el token desde el navegador (DevTools > Application > Session Storage > access_token)
+#    al portapapeles.
+$env:RUTAEXPRESS_TOKEN = (Get-Clipboard)
+$alterado = $env:RUTAEXPRESS_TOKEN.Substring(0, $env:RUTAEXPRESS_TOKEN.Length - 1) + 'A'
+curl.exe -s -i -H "Authorization: Bearer $alterado" "$gw/api/bff/envios"
+
+# 3. Token valido: 200 desde el BFF (solo se muestra el codigo)
+curl.exe -s -o NUL -w "%{http_code}`n" -H "Authorization: Bearer $env:RUTAEXPRESS_TOKEN" "$gw/api/bff/envios"
+
+# 4. Rutas publicas sin token: 200
+curl.exe -s -o NUL -w "%{http_code}`n" "$gw/api/publico/salud"
+
+# 5. Preflight sin token: 204
+curl.exe -s -o NUL -w "%{http_code}`n" -X OPTIONS -H "Origin: https://<ec2_apps_public_ip>" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization" "$gw/api/bff/envios"
+
+# Evidencia de que el 401 no llego al BFF (integrationStatus "-")
+$logGroup = (terraform -chdir=infra/aws-ec2 output -json jwt_authorizer | ConvertFrom-Json).log_group
+aws logs tail $logGroup --since 10m
+
+Remove-Item Env:RUTAEXPRESS_TOKEN
+```
+
+Pasos manuales adicionales (los claims se revisan con `colaboracion/herramientas/extraer_claims_jwt.ps1`, sin mostrar nunca el token completo):
+
+- **B3, token vencido:** usar un token guardado de mas de una hora (en variable de entorno); esperado 401 del Gateway.
+- **B4, otro tenant:** token de una cuenta de otro tenant (`iss` distinto); esperado 401 del Gateway. Requiere una cuenta de otro tenant; si no existe, queda no verificado.
+- **B5, otra audiencia:** token de Microsoft Graph (`aud = 00000003-...`); esperado 401 del Gateway.
+- **B6, sin prefijo `Bearer`:** el Gateway acepta el token sin el prefijo, pero el BFF no reconoce el esquema y responde 401 (`integrationStatus` numerico en el registro).
 
 ---
 
