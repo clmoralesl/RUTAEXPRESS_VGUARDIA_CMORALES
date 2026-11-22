@@ -106,7 +106,7 @@ resource "aws_apigatewayv2_route" "publico_routes" {
 
 resource "aws_cloudwatch_log_group" "api_gateway_accesos" {
   name              = "/aws/apigateway/${var.project_name}-api-gateway"
-  retention_in_days = 7
+  retention_in_days = 14
 
   tags = {
     Project = var.project_name
