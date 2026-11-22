@@ -98,6 +98,8 @@ Este modulo (`infra/aws-ec2`) implementa la infraestructura como codigo (Terrafo
    terraform apply tfplan
    ```
 
+   > Nota (issue #99): `user_data` solo se ejecuta en el primer arranque de la instancia. Modificar `bootstrap-mq.sh` no reconfigura un `ec2_mq` existente. Para aplicar una topologia nueva de RabbitMQ, ver `infra/mq/README.md`, seccion 4.
+
 4. **Comprobar Conectividad Cloud**:
    - Abrir en el navegador: `https://<ec2_apps_public_ip>/salud-proxy`
    - Monitorear RabbitMQ: `http://<ec2_mq_public_ip>:15672/`

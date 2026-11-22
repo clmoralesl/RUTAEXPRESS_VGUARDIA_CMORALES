@@ -1,55 +1,48 @@
 # Infraestructura RabbitMQ - RutaExpress (Issue #17)
 
-Este directorio contiene la definición contenerizada y la topología declarativa completa para el broker de mensajería asíncrona de **RutaExpress** (RabbitMQ 3.13 con Management UI y Dead Letter Queue).
+Broker de mensajeria local para los comandos asincronos de RutaExpress (correo, ticket de bodega y etiqueta).
 
 ---
 
 ## 1. Arquitectura y Puertos
 
-| Servicio | Puerto Host | Puerto Contenedor | Protocolo | Propósito |
-|---|---|---|---|---|
-| **RabbitMQ AMQP** | `5672` | `5672` | AMQP 0-9-1 | Conexión para microservicios Spring Boot (`ms-rutaexpress-envios`, `ms-rutaexpress-notificaciones`) |
-| **Management UI & API** | `15672` | `15672` | HTTP | Interfaz web de administración y API REST para inspección de colas |
+- Imagen: `rabbitmq:3-management-alpine`, contenedor `rutaexpress-rabbitmq`, red `rutaexpress-net`.
+- Puerto `5672`: protocolo AMQP (conexiones de los microservicios).
+- Puerto `15672`: consola de administracion y API HTTP.
+- Archivos: `compose.yml`, `rabbitmq.conf` y `definitions.json` (topologia cargada al arrancar).
 
 ### Credenciales de Acceso
-* **Usuario Administrador:** `guest` (o `rutaexpress`)
-* **Contraseña:** `guest` (o `rutaexpress123`)
-* **Virtual Host:** `/`
-* **URL Management UI:** [http://localhost:15672](http://localhost:15672)
+Las credenciales locales son las definidas en `compose.yml` para el entorno de desarrollo. No se reproducen en este documento.
 
 ---
 
 ## 2. Topología Declarativa (`definitions.json`)
 
-Toda la topología se inicializa de forma **100% declarativa y automática** al levantar el contenedor mediante la directiva `load_definitions` de RabbitMQ. No requiere configuración manual.
+El broker local carga `definitions.json` al arrancar, de modo que la topologia existe antes de que arranque cualquier servicio.
 
 ### 2.1 Exchanges Declarados (3)
-1. **`cmd.direct`** (Direct): Para comandos directos punto a punto con enrutamiento exacto.
-2. **`cmd.topic`** (Topic): Para eventos jerárquicos y patrones de suscripción con comodines (`*`, `#`).
-3. **`cmd.dead.dlx`** (Direct): Dead Letter Exchange dedicado a capturar mensajes rechazados (`NACK requeue=false`) o expirados por TTL.
+| Exchange | Tipo | Uso |
+| :--- | :--- | :--- |
+| `cmd.direct` | direct | Publicacion de comandos desde envios |
+| `cmd.topic` | topic | Suscripcion por patrones |
+| `cmd.dead.dlx` | direct | Dead Letter Exchange |
 
 ### 2.2 Colas y Dead Letter Queues (6 Colas)
-Todas las colas son durables y cuentan con límites de retención y longitud para evitar saturación de memoria.
-
-| Cola Principal | Routing Keys de Entrada | Dead Letter Exchange (DLX) | Dead Letter Routing Key (DLK) | Cola DLQ Destino | TTL Principal | Max Length |
-|---|---|---|---|---|---|---|
-| **`q.cmd.email`** | `cmd.direct: email.send`<br>`cmd.topic: email.*` | `cmd.dead.dlx` | `email.dead` | **`q.cmd.email.dlq`** | 24 h (86.400.000 ms) | 10.000 msgs |
-| **`q.cmd.warehouse`** | `cmd.direct: warehouse.ticket`<br>`cmd.topic: warehouse.#` | `cmd.dead.dlx` | `warehouse.dead` | **`q.cmd.warehouse.dlq`** | 24 h (86.400.000 ms) | 10.000 msgs |
-| **`q.cmd.label`** | `cmd.direct: label.gen`<br>`cmd.topic: label.*` | `cmd.dead.dlx` | `label.dead` | **`q.cmd.label.dlq`** | 24 h (86.400.000 ms) | 10.000 msgs |
+| Cola | Tipo | Argumentos |
+| :--- | :--- | :--- |
+| `q.cmd.email`, `q.cmd.warehouse`, `q.cmd.label` | principal | DLX `cmd.dead.dlx`, DLK `<caso>.dead`, TTL 86400000 ms, largo maximo 10000 |
+| `q.cmd.email.dlq`, `q.cmd.warehouse.dlq`, `q.cmd.label.dlq` | DLQ | TTL 604800000 ms, largo maximo 50000 |
 
 ### 2.3 Matriz de Enlaces (Bindings)
-* **`cmd.direct`:**
-  - `email.send` -> `q.cmd.email`
-  - `warehouse.ticket` -> `q.cmd.warehouse`
-  - `label.gen` -> `q.cmd.label`
-* **`cmd.topic`:**
-  - `email.*` -> `q.cmd.email`
-  - `warehouse.#` -> `q.cmd.warehouse`
-  - `label.*` -> `q.cmd.label`
-* **`cmd.dead.dlx`:**
-  - `email.dead`, `email.send`, `q.cmd.email.dlq` -> `q.cmd.email.dlq`
-  - `warehouse.dead`, `warehouse.ticket`, `q.cmd.warehouse.dlq` -> `q.cmd.warehouse.dlq`
-  - `label.dead`, `label.gen`, `q.cmd.label.dlq` -> `q.cmd.label.dlq`
+Son 15 enlaces. Por cada caso de uso (email, warehouse, label):
+
+| Exchange | Cola destino | Clave |
+| :--- | :--- | :--- |
+| `cmd.direct` | cola principal | `email.send` / `warehouse.ticket` / `label.gen` |
+| `cmd.topic` | cola principal | `email.*` / `warehouse.#` / `label.*` |
+| `cmd.dead.dlx` | DLQ | `<caso>.dead` |
+| `cmd.dead.dlx` | DLQ | clave original (`email.send`, `warehouse.ticket`, `label.gen`) |
+| `cmd.dead.dlx` | DLQ | nombre de la propia DLQ |
 
 ---
 
@@ -74,3 +67,40 @@ docker compose -f infra/mq/compose.yml down
 ```bash
 docker compose -f infra/mq/compose.yml down -v
 ```
+
+---
+
+## 4. Fuente de verdad y recreacion de colas (Issue #99)
+
+### 4.1 Fuente de verdad
+La fuente autoritativa de la topologia son los beans de `ms-rutaexpress-notificaciones` (`TopologiaRabbitMQConfig`) y las propiedades `rutaexpress.mensajeria.*`. `definitions.json` y `infra/aws-ec2/scripts/bootstrap-mq.sh` preaprovisionan la misma topologia para que el broker tenga las colas antes del primer arranque de los servicios. `infra/aws-ec2/verificar_despliegue_aws.ps1` compara ambos archivos y reporta cualquier diferencia. `ms-rutaexpress-envios` declara solo el exchange `cmd.direct`, en el que publica.
+
+### 4.2 Por que cambiar un argumento obliga a recrear la cola
+`PRECONDITION_FAILED` es el error con el que RabbitMQ rechaza declarar un recurso que ya existe con atributos distintos (por ejemplo, una cola sin TTL cuando la nueva declaracion trae TTL). La declaracion solo es idempotente si es identica. Por eso, si cambia un argumento (TTL, largo maximo, DLX), la cola existente debe eliminarse y crearse de nuevo antes de desplegar la version del servicio que declara el valor nuevo.
+
+### 4.3 Orden de despliegue obligatorio
+1. Alinear el broker (`bootstrap-mq.sh` y `definitions.json`) y recrear las colas con el procedimiento A o B.
+2. Desplegar `ms-rutaexpress-notificaciones`.
+3. Desplegar `ms-rutaexpress-envios` (independiente del broker).
+
+Si notificaciones llega antes de recrear las colas en AWS, la declaracion falla con `PRECONDITION_FAILED` y los consumidores no arrancan.
+
+### 4.4 Procedimiento A: desplegar desde cero (laboratorio academico)
+Lo ejecuta el usuario a mano; ningun script del repositorio lo invoca. Los mensajes pendientes se pierden.
+- `terraform destroy` y luego `terraform apply`, o
+- `terraform apply -replace=aws_instance.ec2_mq -replace=aws_instance.ec2_apps`.
+
+Con `-replace` sobre `ec2_mq` la IP privada cambia. Como `ec2_apps` la recibe al crearse y su `user_data` no se vuelve a ejecutar, tambien debe reemplazarse `ec2_apps`.
+
+### 4.5 Procedimiento B: en caliente, sin reemplazar instancias
+1. Detener `ms-rutaexpress-notificaciones` en `ec2_apps`.
+2. Verificar en la consola `15672` que las 6 colas esten vacias, o aceptar la perdida de sus mensajes.
+3. Por SSH a `ec2_mq`, reemplazar `/opt/rutaexpress/mq/definitions.json` por la version alineada. Este paso es obligatorio: si al reiniciar queda el JSON antiguo, la importacion vuelve a crear las colas sin TTL y el conflicto reaparece.
+4. Eliminar las 6 colas (consola o `rabbitmqadmin delete queue name=...`).
+5. Ejecutar `docker compose restart` en `/opt/rutaexpress/mq`.
+6. Levantar la nueva version de notificaciones.
+
+En local no hace falta recrear nada: `definitions.json` ya contiene los argumentos objetivo.
+
+### 4.6 Limites de la DLQ
+Una DLQ llena (50000 mensajes) o con mensajes de mas de 7 dias (604800000 ms) descarta mensajes en silencio. Conviene revisar las DLQ antes de que alcancen esos limites.
