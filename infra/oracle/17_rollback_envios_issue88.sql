@@ -48,14 +48,15 @@ BEGIN
 
         IF v_filas > 0 THEN
             IF v_tabla_bkp = 0 THEN
-                EXECUTE IMMEDIATE 'CREATE TABLE USER_ENVIOS.ENVIOS_PREREGISTRO_BKP_ISSUE88 AS '
-                    || 'SELECT id, sucursal_origen_id, servicio_id, largo_declarado_cm, ancho_declarado_cm, alto_declarado_cm, '
-                    || 'peso_verificado_kg, largo_verificado_cm, ancho_verificado_cm, alto_verificado_cm, '
-                    || 'zona_estimada, factor_zona_estimado, tarifa_base_estimada, precio_kg_estimado, '
-                    || 'peso_facturable_estimado_kg, precio_estimado_clp, zona_final, factor_zona_final, '
-                    || 'tarifa_base_final, precio_kg_final, peso_facturable_final_kg, precio_final_clp, '
-                    || 'remitente_email, verificado_por_email, fecha_aceptacion '
-                    || 'FROM USER_ENVIOS.ENVIOS WHERE servicio_id IS NOT NULL OR remitente_email IS NOT NULL';
+                EXECUTE IMMEDIATE 'CREATE TABLE USER_ENVIOS.ENVIOS_PREREGISTRO_BKP_ISSUE88 AS
+                    SELECT id, sucursal_origen_id, servicio_id, largo_declarado_cm, ancho_declarado_cm, alto_declarado_cm,
+                           peso_verificado_kg, largo_verificado_cm, ancho_verificado_cm, alto_verificado_cm,
+                           zona_estimada, factor_zona_estimado, tarifa_base_estimada, precio_kg_estimado,
+                           peso_facturable_estimado_kg, precio_estimado_clp, zona_final, factor_zona_final,
+                           tarifa_base_final, precio_kg_final, peso_facturable_final_kg, precio_final_clp,
+                           remitente_email, verificado_por_email, fecha_aceptacion
+                      FROM USER_ENVIOS.ENVIOS
+                     WHERE servicio_id IS NOT NULL OR remitente_email IS NOT NULL';
                 DBMS_OUTPUT.PUT_LINE('[INFO] Respaldo ENVIOS_PREREGISTRO_BKP_ISSUE88 creado con ' || v_filas || ' filas.');
             ELSE
                 EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM USER_ENVIOS.ENVIOS_PREREGISTRO_BKP_ISSUE88' INTO v_filas_bkp;
@@ -85,15 +86,28 @@ END;
 -- PASO 4: eliminar restricciones CHECK si existen
 DECLARE
     v_con NUMBER := 0;
+
+    FUNCTION existe_restriccion(p_nombre IN VARCHAR2) RETURN BOOLEAN IS
+        v_n NUMBER := 0;
+    BEGIN
+        SELECT COUNT(*) INTO v_n
+          FROM ALL_CONSTRAINTS
+         WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS' AND constraint_name = p_nombre;
+        RETURN v_n > 0;
+    END existe_restriccion;
 BEGIN
-    FOR r IN (SELECT constraint_name
-                FROM ALL_CONSTRAINTS
-               WHERE owner = 'USER_ENVIOS' AND table_name = 'ENVIOS'
-                 AND constraint_name IN ('CHK_ENVIOS_PESO_VERIFICADO', 'CHK_ENVIOS_MEDIDAS_DECL', 'CHK_ENVIOS_MEDIDAS_VERIF'))
-    LOOP
-        EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP CONSTRAINT ' || r.constraint_name;
+    IF existe_restriccion('CHK_ENVIOS_PESO_VERIFICADO') THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP CONSTRAINT CHK_ENVIOS_PESO_VERIFICADO';
         v_con := v_con + 1;
-    END LOOP;
+    END IF;
+    IF existe_restriccion('CHK_ENVIOS_MEDIDAS_DECL') THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP CONSTRAINT CHK_ENVIOS_MEDIDAS_DECL';
+        v_con := v_con + 1;
+    END IF;
+    IF existe_restriccion('CHK_ENVIOS_MEDIDAS_VERIF') THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP CONSTRAINT CHK_ENVIOS_MEDIDAS_VERIF';
+        v_con := v_con + 1;
+    END IF;
     DBMS_OUTPUT.PUT_LINE('[INFO] Restricciones eliminadas: ' || v_con);
 END;
 /
@@ -112,13 +126,13 @@ BEGIN
            'PESO_FACTURABLE_FINAL_KG','PRECIO_FINAL_CLP','REMITENTE_EMAIL','VERIFICADO_POR_EMAIL','FECHA_ACEPTACION');
 
     IF v_cols > 0 THEN
-        EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP ('
-            || 'sucursal_origen_id, servicio_id, largo_declarado_cm, ancho_declarado_cm, alto_declarado_cm, '
-            || 'peso_verificado_kg, largo_verificado_cm, ancho_verificado_cm, alto_verificado_cm, '
-            || 'zona_estimada, factor_zona_estimado, tarifa_base_estimada, precio_kg_estimado, '
-            || 'peso_facturable_estimado_kg, precio_estimado_clp, zona_final, factor_zona_final, '
-            || 'tarifa_base_final, precio_kg_final, peso_facturable_final_kg, precio_final_clp, '
-            || 'remitente_email, verificado_por_email, fecha_aceptacion)';
+        EXECUTE IMMEDIATE 'ALTER TABLE USER_ENVIOS.ENVIOS DROP (
+            sucursal_origen_id, servicio_id, largo_declarado_cm, ancho_declarado_cm, alto_declarado_cm,
+            peso_verificado_kg, largo_verificado_cm, ancho_verificado_cm, alto_verificado_cm,
+            zona_estimada, factor_zona_estimado, tarifa_base_estimada, precio_kg_estimado,
+            peso_facturable_estimado_kg, precio_estimado_clp, zona_final, factor_zona_final,
+            tarifa_base_final, precio_kg_final, peso_facturable_final_kg, precio_final_clp,
+            remitente_email, verificado_por_email, fecha_aceptacion)';
     END IF;
 END;
 /
