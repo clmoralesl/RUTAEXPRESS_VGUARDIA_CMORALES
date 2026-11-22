@@ -133,7 +133,7 @@ variable "api_audiencias_jwt" {
   default     = ["api://a55c035c-76ef-4ddf-ab9a-545d90386f03"]
 
   validation {
-    condition     = length(var.api_audiencias_jwt) > 0 && alltrue([for a in var.api_audiencias_jwt : length(trimspace(a)) > 0])
-    error_message = "api_audiencias_jwt debe contener al menos una audiencia no vacia."
+    condition     = length(var.api_audiencias_jwt) > 0 && alltrue([for a in var.api_audiencias_jwt : can(regex("^[A-Za-z0-9:/._-]+$", a))])
+    error_message = "api_audiencias_jwt debe contener al menos una audiencia, solo con letras, digitos y los caracteres : / . _ - (el valor se escribe en un .env sin comillas y separado por comas)."
   }
 }

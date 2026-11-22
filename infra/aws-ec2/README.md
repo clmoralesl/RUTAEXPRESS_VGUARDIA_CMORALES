@@ -125,8 +125,9 @@ El API Gateway (HTTP API) valida el token de Microsoft Entra ID antes de reenvia
 
 ### Limitaciones declaradas
 
-- **Acceso directo al BFF:** el BFF tambien es alcanzable por `http://<ip>:8080` y `https://<ip>/api/` sin pasar por el Gateway. El BFF sigue validando firma y roles, pero la validacion de emisor y audiencia en el borde se omite por esas vias hasta cerrar el issue #95. Alternativas futuras: VPC Link con un balanceador privado y cierre del puerto 8080, o una cabecera secreta inyectada por el Gateway y verificada por el BFF.
+- **Acceso directo al BFF:** el BFF tambien es alcanzable por `http://<ip>:8080` y `https://<ip>/api/` sin pasar por el Gateway. Desde el issue #95 el BFF valida firma, vigencia, emisor y audiencia (las mismas variables de Terraform que el Gateway) tambien en el acceso directo; lo que permanece es la exposicion de red. Alternativas futuras: VPC Link con un balanceador privado y cierre del puerto 8080, o una cabecera secreta inyectada por el Gateway y verificada por el BFF.
 - **Token sin renovacion en el frontend:** `catalogo`, `auditoria` y `reportes` adjuntan el token guardado en `sessionStorage['access_token']`, obtenido una sola vez al volver del login. Tras su expiracion (60 a 90 minutos) reciben 401, ahora emitido por el Gateway. Es una limitacion preexistente que requiere un issue aparte en el frontend.
+- **Orden de despliegue del BFF (issue #95):** `bootstrap-apps.sh` solo corre en el primer arranque de `ec2-apps` y `actualizar.sh` no regenera el `.env`. Antes de actualizar el BFF, agregar `AZURE_TENANT_ID` (GUID del tenant) y `AZURE_API_AUDIENCIAS` (las mismas audiencias de `api_audiencias_jwt`, separadas por comas) al `.env` existente, o recrear la instancia con `terraform apply -replace=aws_instance.ec2_apps`. Si se actualiza el BFF antes, no arranca (fallo cerrado esperado) y el servicio queda caido. El BFF ya no usa `JWK_SET_URI`.
 - **Desfase de reloj:** cerca de `exp`, el Gateway puede rechazar un token que el BFF aun aceptaria (tolerancia de 60 s en Spring).
 
 ### Guia de demostracion con curl (PowerShell)
