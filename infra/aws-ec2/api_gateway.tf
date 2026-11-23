@@ -16,7 +16,10 @@ resource "aws_apigatewayv2_api" "rutaexpress_api" {
     allow_origins = ["*"]
     allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     allow_headers = ["authorization", "content-type"]
-    max_age       = 86400
+    # Issue #120: sin esto el navegador no deja leer Retry-After en un 429
+    # de origen cruzado (las cabeceras CORS del backend se ignoran).
+    expose_headers = ["retry-after"]
+    max_age        = 86400
   }
 
   tags = {
@@ -121,6 +124,21 @@ resource "aws_apigatewayv2_stage" "default_stage" {
   api_id      = aws_apigatewayv2_api.rutaexpress_api.id
   name        = "$default"
   auto_deploy = true
+
+  # Issue #120: limite global del stage y uno mas estricto para las rutas sin token.
+  default_route_settings {
+    throttling_burst_limit = var.gateway_throttling_rafaga
+    throttling_rate_limit  = var.gateway_throttling_tasa
+  }
+
+  route_settings {
+    route_key              = "GET /api/publico/{proxy+}"
+    throttling_burst_limit = var.gateway_throttling_publico_rafaga
+    throttling_rate_limit  = var.gateway_throttling_publico_tasa
+  }
+
+  # route_settings exige que la ruta exista antes que el stage la configure.
+  depends_on = [aws_apigatewayv2_route.publico_routes]
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway_accesos.arn
