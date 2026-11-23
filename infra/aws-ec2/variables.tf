@@ -137,3 +137,47 @@ variable "api_audiencias_jwt" {
     error_message = "api_audiencias_jwt debe contener al menos una audiencia, solo con letras, digitos y los caracteres : / . _ - (el valor se escribe en un .env sin comillas y separado por comas)."
   }
 }
+
+
+# Issue #120: throttling del API Gateway. Es un limite global del stage
+# (cubeta de tokens compartida por todos los clientes), no por IP.
+# El limite de las rutas publicas debe ser menor o igual al del stage.
+variable "gateway_throttling_rafaga" {
+  description = "Rafaga maxima de peticiones del stage del API Gateway"
+  type        = number
+  default     = 100
+  validation {
+    condition     = var.gateway_throttling_rafaga >= 1
+    error_message = "gateway_throttling_rafaga debe ser al menos 1 (0 bloquea todo el trafico)."
+  }
+}
+
+variable "gateway_throttling_tasa" {
+  description = "Peticiones por segundo sostenidas del stage del API Gateway"
+  type        = number
+  default     = 50
+  validation {
+    condition     = var.gateway_throttling_tasa >= 1
+    error_message = "gateway_throttling_tasa debe ser al menos 1 (0 bloquea todo el trafico)."
+  }
+}
+
+variable "gateway_throttling_publico_rafaga" {
+  description = "Rafaga maxima de GET /api/publico/{proxy+} (rutas sin token, incluye el cotizador)"
+  type        = number
+  default     = 20
+  validation {
+    condition     = var.gateway_throttling_publico_rafaga >= 1
+    error_message = "gateway_throttling_publico_rafaga debe ser al menos 1."
+  }
+}
+
+variable "gateway_throttling_publico_tasa" {
+  description = "Peticiones por segundo sostenidas de GET /api/publico/{proxy+}"
+  type        = number
+  default     = 10
+  validation {
+    condition     = var.gateway_throttling_publico_tasa >= 1
+    error_message = "gateway_throttling_publico_tasa debe ser al menos 1."
+  }
+}

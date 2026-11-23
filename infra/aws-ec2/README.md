@@ -52,7 +52,7 @@ Este modulo (`infra/aws-ec2`) implementa la infraestructura como codigo (Terrafo
 | Security Group | Puerto / Protocolo | Origen Autorizado | Proposito |
 | :--- | :--- | :--- | :--- |
 | **`sg_ec2_apps`** | `443/TCP` (HTTPS) | `0.0.0.0/0` (Internet) | Trafico seguro cifrado hacia Nginx Reverse Proxy y MSAL |
-| | `8080/TCP` (HTTP) | `0.0.0.0/0` (Internet) | Integracion HTTP_PROXY del API Gateway hacia ms-rutaexpress-bff |
+| | `8080/TCP` (HTTP) | `0.0.0.0/0` (Internet) | Integracion HTTP_PROXY del API Gateway hacia ms-rutaexpress-bff. Riesgo aceptado R-B (issue #120), ver 'Riesgos aceptados' |
 | | `80/TCP` (HTTP) | `0.0.0.0/0` (Internet) | Redireccion permanente HTTP 301 a HTTPS |
 | | `22/TCP` (SSH) | `var.allowed_admin_cidr` | Gestion y administracion tecnica remota |
 | **`sg_ec2_mq`** | `5672/TCP` (AMQP) | **`sg_ec2_apps` (Exclusivo)** | Aislamiento estricto: solo el backend produce/consume colas |
@@ -125,12 +125,23 @@ El API Gateway (HTTP API) valida el token de Microsoft Entra ID antes de reenvia
 - **CORS con cabeceras explicitas:** `allow_headers = ["authorization", "content-type"]`. Segun el estandar Fetch, el comodin no cubre `Authorization`, por lo que debe nombrarse. Si el frontend agrega una cabecera propia nueva, hay que agregarla en `api_gateway.tf`.
 - **Registro de acceso:** el stage escribe en el grupo de CloudWatch `/aws/apigateway/<project_name>-api-gateway` (retencion de 14 dias) el estado, `integrationStatus` y el error del autorizador. No registra cabeceras ni tokens. Un rechazo del Gateway muestra `integrationStatus = "-"`. Si `terraform apply` falla por permisos de CloudWatch en AWS Academy, retirar `access_log_settings` y el grupo de registros, y distinguir el origen del 401 por el cuerpo: el Gateway responde `{"message":"Unauthorized"}` y el BFF responde cuerpo vacio con `WWW-Authenticate: Bearer`.
 
+### Throttling y Retry-After (issue #120)
+
+El stage `$default` implementa throttling global configurable (`gateway_throttling_rafaga = 100`, `gateway_throttling_tasa = 50`), protegiendo la capacidad general de la EC2 ante rafagas compartidas por todos los clientes. La ruta publica `GET /api/publico/{proxy+}` aplica un limite mas estricto (`gateway_throttling_publico_rafaga = 20`, `gateway_throttling_publico_tasa = 10`) para mitigar abusos sobre el cotizador y rutas sin autorizador. Si el throttling del Gateway se activa, responde HTTP 429 con cuerpo `{"message":"Too Many Requests"}`, a diferencia del 429 emitido por el limitador por IP del BFF que responde `{"codigo":"LIMITE_TASA_EXCEDIDO",...}` con cabecera `Retry-After`. Ademas, `expose_headers = ["retry-after"]` en CORS permite a los navegadores leer dicha cabecera ante respuestas 429 en llamadas de origen cruzado.
+
 ### Limitaciones declaradas
 
-- **Acceso directo al BFF:** el BFF tambien es alcanzable por `http://<ip>:8080` y `https://<ip>/api/` sin pasar por el Gateway. Desde el issue #95 el BFF valida firma, vigencia, emisor y audiencia (las mismas variables de Terraform que el Gateway) tambien en el acceso directo; lo que permanece es la exposicion de red. Alternativas futuras: VPC Link con un balanceador privado y cierre del puerto 8080, o una cabecera secreta inyectada por el Gateway y verificada por el BFF.
+- **Acceso directo al BFF:** el BFF tambien es alcanzable por `http://<ip>:8080` y `https://<ip>/api/` sin pasar por el Gateway. Desde el issue #95 el BFF valida firma, vigencia, emisor y audiencia (las mismas variables de Terraform que el Gateway) tambien en el acceso directo; lo que permanece es la exposicion de red. Ver subseccion 'Riesgos aceptados' (R-B).
 - **Token sin renovacion en el frontend:** `catalogo`, `auditoria` y `reportes` adjuntan el token guardado en `sessionStorage['access_token']`, obtenido una sola vez al volver del login. Tras su expiracion (60 a 90 minutos) reciben 401, ahora emitido por el Gateway. Es una limitacion preexistente que requiere un issue aparte en el frontend.
 - **Orden de despliegue del BFF (issue #95):** `bootstrap-apps.sh` solo corre en el primer arranque de `ec2-apps` y `actualizar.sh` no regenera el `.env`. Antes de actualizar el BFF, agregar `AZURE_TENANT_ID` (GUID del tenant) y `AZURE_API_AUDIENCIAS` (las mismas audiencias de `api_audiencias_jwt`, separadas por comas) al `.env` existente, o recrear la instancia con `terraform apply -replace=aws_instance.ec2_apps`. Si se actualiza el BFF antes, no arranca (fallo cerrado esperado) y el servicio queda caido. El BFF ya no usa `JWK_SET_URI`.
 - **Desfase de reloj:** cerca de `exp`, el Gateway puede rechazar un token que el BFF aun aceptaria (tolerancia de 60 s en Spring).
+
+### Riesgos aceptados
+
+- **R-B (Acceso directo al BFF y cifrado del tramo Gateway-EC2):** Quien conozca la IP publica puede invocar al BFF directamente a traves de dos puertas: `http://<ip>:8080` (HTTP plano) y `https://<ip>/api/` (Nginx TLS).
+  - *Elementos de contencion:* ms-rutaexpress-bff valida de manera autonoma firma, emisor, audiencia y vigencia del JWT (#95). Por la puerta de Nginx, el proxy inyecta `$remote_addr` al final de `X-Forwarded-For` de forma confiable (`forward-headers-strategy: native`), garantizando que el limite de tasa por IP del cotizador opere por visitante real y no pueda falsearse.
+  - *Elementos no contenidos:* El token viaja sin cifrar entre el API Gateway y el puerto 8080 de la EC2 a traves de la red publica de AWS, y el throttling del Gateway no protege las invocaciones directas a la EC2.
+  - *Solucion para produccion:* Implementar VPC Link hacia un Network Load Balancer (NLB) interno en subred privada, cerrando la regla del puerto 8080 en el Security Group unicamente al rango CIDR de la VPC.
 
 ### Guia de demostracion con curl (PowerShell)
 
