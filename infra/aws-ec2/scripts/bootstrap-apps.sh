@@ -45,11 +45,13 @@ git clone https://github.com/clmoralesl/ms-rutaexpress-auditoria.git || (cd ms-r
 git clone https://github.com/clmoralesl/ms-rutaexpress-reportes.git || (cd ms-rutaexpress-reportes && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-mensajeria.git || (cd ms-rutaexpress-mensajeria && git pull)
 
-# Inyectar dinamicamente la URL del API Gateway en el frontend antes de la compilacion Docker
-if [ -n "$API_GATEWAY_URL" ]; then
-  echo "Inyectando API Gateway URL ($API_GATEWAY_URL) en environment.prod.ts..."
-  sed -i "s|apiUrl: '.*'|apiUrl: '${API_GATEWAY_URL}'|g" /opt/rutaexpress/rutaexpress-frontend/src/environments/environment.prod.ts
+# Issue #125: la URL del Gateway se entrega al frontend en tiempo de ejecucion.
+# frontend.env esta fuera de Git (*.env), por lo que sobrevive a actualizar.sh.
+if [ -z "$API_GATEWAY_URL" ]; then
+  echo "ERROR: API_GATEWAY_URL vacia; el frontend no podria llamar al Gateway" >&2
+  exit 1
 fi
+printf 'RUTAEXPRESS_API_URL=%s\n' "$API_GATEWAY_URL" > /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/frontend.env
 
 echo "=== [2.1] Preparando directorio para Oracle Cloud Wallet ==="
 mkdir -p /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/infra/oracle/wallet

@@ -28,13 +28,16 @@ services:
     restart: unless-stopped
 
   # ----------------------------------------------------------------------------
-  # Frontend Angular 20 (Servido mediante Nginx con Reverse Proxy)
+  # Frontend Angular 20; la URL de la API llega en /config.js (issue #125)
   # ----------------------------------------------------------------------------
   rutaexpress-frontend:
     build:
       context: ../../rutaexpress-frontend
       dockerfile: Dockerfile
     container_name: rutaexpress-frontend
+    env_file:
+      - path: ../../frontend.env
+        required: false
     ports:
       - "4200:80"
     depends_on:

@@ -185,6 +185,55 @@ Pasos manuales adicionales (los claims se revisan con `colaboracion/herramientas
 
 ---
 
+## Frontend a traves del API Gateway (issue #125)
+
+### Flujo de Configuracion en Tiempo de Ejecucion
+En entornos productivos (AWS), la URL del API Gateway HTTP API v2 cambia con cada despliegue o recreacion de infraestructura mediante Terraform. Para evitar recompilaciones de la imagen de frontend y prevenir la perdida de configuracion tras actualizaciones con `actualizar.sh`:
+
+1. **Aprovisionamiento y desacoplamiento:** En el primer arranque de la instancia `ec2-apps`, `bootstrap-apps.sh` recibe la variable de entorno `API_GATEWAY_URL` y la almacena en `/opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/frontend.env` con el formato `RUTAEXPRESS_API_URL=<api_endpoint>`.
+2. **Supervivencia a despliegues (C13):** `frontend.env` reside en la raiz del monorepo y coincide con el patron `*.env` de `.gitignore`. Por consiguiente, `git reset --hard origin/main` en `/opt/rutaexpress/actualizar.sh` no altera ni elimina este archivo.
+3. **Inyeccion de Compose:** `infra/apps/compose.yml` carga este archivo mediante `env_file` con `required: false`. En entornos locales donde `frontend.env` no existe, la variable `RUTAEXPRESS_API_URL` queda sin definir y el sistema opera en modo mismo origen (Same-Origin).
+4. **Validacion de entrada y generacion de config.js:** Al arrancar el contenedor Nginx de `rutaexpress-frontend`, el script `/docker-entrypoint.d/40-rutaexpress-config.sh` aplica una lista blanca estricta sobre `RUTAEXPRESS_API_URL`. Si el valor es invalido o contiene saltos de linea, el contenedor detiene su ejecucion (fallo cerrado). Si es valido, genera `/usr/share/nginx/html/config.js` exponiendo `window.__RUTAEXPRESS_CONFIG__ = Object.freeze({ apiUrl: "<url>" });`.
+5. **Carga en el navegador:** Un tag `<script src="config.js">` sincrono en `<head>` garantiza que la URL este disponible en `window.__RUTAEXPRESS_CONFIG__` antes de que Angular inicie la aplicacion. La funcion utilitaria `obtenerApiUrl()` centraliza la resolucion para todos los servicios Angular y para la configuracion de `MsalInterceptor`.
+6. **Cache-Control estricto (C12):** Nginx aplica `location = /config.js` con cabecera `Cache-Control: no-store` para evitar que el navegador o proxies intermedios almacenen una URL obsoleta del Gateway.
+
+### Registro de URI de Redireccion en Microsoft Entra ID (D12)
+La URI de redireccion configurada en MSAL (`window.location.origin + '/'`) depende de la IP publica dinamica de `ec2-apps`.
+- Tras cada `terraform apply` que asigne una nueva IP publica a `ec2-apps`, se debe registrar inmediatamente `https://<nueva-ip-ec2-apps>/` en el portal de Microsoft Entra ID (Azure Portal > App Registrations > RutaExpress > Authentication > Single-page application).
+- Como regla de higiene y seguridad, eliminar del registro de Entra ID cualquier IP antigua u obsoleta (por ejemplo, `https://44.204.155.46/`).
+
+### Persistencia de location /api/ y mitigacion de CORS (D7)
+- Se mantiene la directiva `location /api/` en ambos Nginx (proxy de borde y contenedor frontend) para asegurar compatibilidad con el entorno de desarrollo local (el cual no utiliza API Gateway).
+- En AWS, el acceso directo al BFF en el puerto 8080 sigue expuesto como riesgo aceptado R-B (#120), validando tokens de forma autonoma.
+- Dado que el frontend desplegado invoca los endpoints directamente a traves del API Gateway, las llamadas al proxy de borde se limitan a recursos del mismo origen. Esto desacopla el frontend del CORS reflejado del borde, permitiendo que el issue #121 retire dicho mecanismo de forma limpia.
+
+### Comprobacion Automatizada
+El script `infra/aws-ec2/verificar_frontend_gateway.ps1` permite validar tanto la construccion local como el despliegue en la nube:
+
+1. **Verificacion local (Docker y script de configuracion):**
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File infra/aws-ec2/verificar_frontend_gateway.ps1 -Local
+   ```
+2. **Verificacion remota (Borde y API Gateway):**
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File infra/aws-ec2/verificar_frontend_gateway.ps1 -Borde "https://<ip-ec2-apps>" -Gateway "https://<id>.execute-api.us-east-1.amazonaws.com"
+   ```
+
+### Comprobacion de Supervivencia a Actualizaciones (C13)
+Para verificar en AWS que una actualizacion de codigo no elimina la configuracion del Gateway:
+1. Conectarse por SSH a `ec2-apps` y ejecutar:
+   ```bash
+   sudo /opt/rutaexpress/actualizar.sh
+   ```
+2. Confirmar que el archivo `/opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/frontend.env` continua existiendo con el valor intacto.
+3. Ejecutar la comprobacion 1 desde PowerShell:
+   ```powershell
+   curl.exe -sk -i "https://<ip-ec2-apps>/config.js"
+   ```
+   Verificar que responde HTTP 200 con `Cache-Control: no-store` y la URL valida del API Gateway.
+
+---
+
 ## Recuperacion tras una inyeccion interrumpida
 
 Si una recreacion de contenedores se corta a mitad (por ejemplo, porque se perdio la sesion SSH), los servicios pueden quedar detenidos o con nombres temporales del tipo `<id>_ms-rutaexpress-envios`.
