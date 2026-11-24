@@ -96,91 +96,127 @@ cat << 'EOF' > definitions.json
     {
       "name": "q.cmd.email",
       "vhost": "/",
+      "type": "classic",
       "durable": true,
       "auto_delete": false,
-      "type": "classic",
       "arguments": {
         "x-dead-letter-exchange": "cmd.dead.dlx",
         "x-dead-letter-routing-key": "email.dead",
-        "x-message-ttl": 86400000,
-        "x-max-length": 10000
+        "x-max-length": 10000,
+        "x-message-ttl": 86400000
       }
     },
     {
       "name": "q.cmd.email.dlq",
       "vhost": "/",
+      "type": "classic",
       "durable": true,
       "auto_delete": false,
-      "type": "classic",
       "arguments": {
-        "x-message-ttl": 604800000,
-        "x-max-length": 50000
+        "x-max-length": 50000,
+        "x-message-ttl": 604800000
+      }
+    },
+    {
+      "name": "q.cmd.email.retry",
+      "vhost": "/",
+      "type": "classic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "cmd.direct",
+        "x-dead-letter-routing-key": "email.send",
+        "x-message-ttl": 10000
       }
     },
     {
       "name": "q.cmd.warehouse",
       "vhost": "/",
+      "type": "classic",
       "durable": true,
       "auto_delete": false,
-      "type": "classic",
       "arguments": {
         "x-dead-letter-exchange": "cmd.dead.dlx",
         "x-dead-letter-routing-key": "warehouse.dead",
-        "x-message-ttl": 86400000,
-        "x-max-length": 10000
+        "x-max-length": 10000,
+        "x-message-ttl": 86400000
       }
     },
     {
       "name": "q.cmd.warehouse.dlq",
       "vhost": "/",
+      "type": "classic",
       "durable": true,
       "auto_delete": false,
-      "type": "classic",
       "arguments": {
-        "x-message-ttl": 604800000,
-        "x-max-length": 50000
+        "x-max-length": 50000,
+        "x-message-ttl": 604800000
+      }
+    },
+    {
+      "name": "q.cmd.warehouse.retry",
+      "vhost": "/",
+      "type": "classic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "cmd.direct",
+        "x-dead-letter-routing-key": "warehouse.ticket",
+        "x-message-ttl": 10000
       }
     },
     {
       "name": "q.cmd.label",
       "vhost": "/",
+      "type": "classic",
       "durable": true,
       "auto_delete": false,
-      "type": "classic",
       "arguments": {
         "x-dead-letter-exchange": "cmd.dead.dlx",
         "x-dead-letter-routing-key": "label.dead",
-        "x-message-ttl": 86400000,
-        "x-max-length": 10000
+        "x-max-length": 10000,
+        "x-message-ttl": 86400000
       }
     },
     {
       "name": "q.cmd.label.dlq",
       "vhost": "/",
+      "type": "classic",
       "durable": true,
       "auto_delete": false,
-      "type": "classic",
       "arguments": {
-        "x-message-ttl": 604800000,
-        "x-max-length": 50000
+        "x-max-length": 50000,
+        "x-message-ttl": 604800000
+      }
+    },
+    {
+      "name": "q.cmd.label.retry",
+      "vhost": "/",
+      "type": "classic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "cmd.direct",
+        "x-dead-letter-routing-key": "label.gen",
+        "x-message-ttl": 10000
       }
     }
   ],
   "bindings": [
-    {
-      "source": "cmd.topic",
-      "vhost": "/",
-      "destination": "q.cmd.email",
-      "destination_type": "queue",
-      "routing_key": "email.*",
-      "arguments": {}
-    },
     {
       "source": "cmd.direct",
       "vhost": "/",
       "destination": "q.cmd.email",
       "destination_type": "queue",
       "routing_key": "email.send",
+      "arguments": {}
+    },
+    {
+      "source": "cmd.topic",
+      "vhost": "/",
+      "destination": "q.cmd.email",
+      "destination_type": "queue",
+      "routing_key": "email.*",
       "arguments": {}
     },
     {
@@ -208,19 +244,19 @@ cat << 'EOF' > definitions.json
       "arguments": {}
     },
     {
-      "source": "cmd.topic",
-      "vhost": "/",
-      "destination": "q.cmd.warehouse",
-      "destination_type": "queue",
-      "routing_key": "warehouse.#",
-      "arguments": {}
-    },
-    {
       "source": "cmd.direct",
       "vhost": "/",
       "destination": "q.cmd.warehouse",
       "destination_type": "queue",
       "routing_key": "warehouse.ticket",
+      "arguments": {}
+    },
+    {
+      "source": "cmd.topic",
+      "vhost": "/",
+      "destination": "q.cmd.warehouse",
+      "destination_type": "queue",
+      "routing_key": "warehouse.#",
       "arguments": {}
     },
     {
@@ -248,19 +284,19 @@ cat << 'EOF' > definitions.json
       "arguments": {}
     },
     {
-      "source": "cmd.topic",
-      "vhost": "/",
-      "destination": "q.cmd.label",
-      "destination_type": "queue",
-      "routing_key": "label.*",
-      "arguments": {}
-    },
-    {
       "source": "cmd.direct",
       "vhost": "/",
       "destination": "q.cmd.label",
       "destination_type": "queue",
       "routing_key": "label.gen",
+      "arguments": {}
+    },
+    {
+      "source": "cmd.topic",
+      "vhost": "/",
+      "destination": "q.cmd.label",
+      "destination_type": "queue",
+      "routing_key": "label.*",
       "arguments": {}
     },
     {

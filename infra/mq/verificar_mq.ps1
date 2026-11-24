@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    Script de Verificación Autónoma de la Topología de RabbitMQ para RutaExpress (Issue #17).
+    Script de Verificación Autónoma de la Topología de RabbitMQ para RutaExpress (Issue #17 e Issue #106).
 .DESCRIPTION
     Verifica:
     1. Disponibilidad del servidor RabbitMQ y Management API en puerto 15672.
     2. Existencia y configuración de los 3 Exchanges (cmd.direct, cmd.topic, cmd.dead.dlx).
-    3. Existencia y configuración de las 6 Colas (3 principales + 3 DLQ) con sus argumentos DLX.
-    4. Existencia de los 15 Bindings requeridos.
+    3. Existencia y configuración de las 9 Colas (3 principales + 3 DLQ + 3 de espera).
+    4. Existencia de los 15 Bindings requeridos (y ausencia de bindings explícitos hacia colas de espera).
     5. Prueba E2E de enrutamiento y derivación automática a DLQ ante rechazo (NACK requeue=false).
 #>
 
@@ -38,7 +38,7 @@ $headers = @{
 }
 
 Write-Host "========================================================================" -ForegroundColor Yellow
-Write-Host " VERIFICACIÓN AUTÓNOMA TOPOLOGÍA RABBITMQ - RUTAEXPRESS (ISSUE #17)" -ForegroundColor Yellow
+Write-Host " VERIFICACIÓN AUTÓNOMA TOPOLOGÍA RABBITMQ - RUTAEXPRESS" -ForegroundColor Yellow
 Write-Host "========================================================================" -ForegroundColor Yellow
 
 # 1. Verificar Disponibilidad del Broker (con reintentos para arranque en frío)
@@ -83,15 +83,18 @@ foreach ($exp in $expectedExchanges) {
     }
 }
 
-# 3. Verificar las 6 Colas y sus Argumentos DLQ
-Write-Info "`n3. Verificando las 6 Colas (3 principales + 3 DLQ)..."
+# 3. Verificar las 9 Colas (3 principales + 3 DLQ + 3 de espera)
+Write-Info "`n3. Verificando las 9 Colas (3 principales + 3 DLQ + 3 de espera)..."
 $expectedQueues = @(
-    @{ Name = "q.cmd.email"; IsDlq = $false; Dlk = "email.dead" },
-    @{ Name = "q.cmd.email.dlq"; IsDlq = $true },
-    @{ Name = "q.cmd.warehouse"; IsDlq = $false; Dlk = "warehouse.dead" },
-    @{ Name = "q.cmd.warehouse.dlq"; IsDlq = $true },
-    @{ Name = "q.cmd.label"; IsDlq = $false; Dlk = "label.dead" },
-    @{ Name = "q.cmd.label.dlq"; IsDlq = $true }
+    @{ Name = "q.cmd.email"; Tipo = "Principal"; Dlk = "email.dead" },
+    @{ Name = "q.cmd.email.dlq"; Tipo = "Dlq" },
+    @{ Name = "q.cmd.email.retry"; Tipo = "Espera"; Dlk = "email.send" },
+    @{ Name = "q.cmd.warehouse"; Tipo = "Principal"; Dlk = "warehouse.dead" },
+    @{ Name = "q.cmd.warehouse.dlq"; Tipo = "Dlq" },
+    @{ Name = "q.cmd.warehouse.retry"; Tipo = "Espera"; Dlk = "warehouse.ticket" },
+    @{ Name = "q.cmd.label"; Tipo = "Principal"; Dlk = "label.dead" },
+    @{ Name = "q.cmd.label.dlq"; Tipo = "Dlq" },
+    @{ Name = "q.cmd.label.retry"; Tipo = "Espera"; Dlk = "label.gen" }
 )
 
 $allQueues = Invoke-RestMethod -Uri "$HostUri/api/queues" -Headers $headers
@@ -102,27 +105,40 @@ foreach ($q in $expectedQueues) {
         exit 1
     }
 
-    if ($q.IsDlq) {
-        $dlqTtl = $found.arguments.'x-message-ttl'
-        $dlqMaxLen = $found.arguments.'x-max-length'
-        $dlqDlx = $found.arguments.'x-dead-letter-exchange'
-        if ($dlqTtl -eq 604800000 -and $dlqMaxLen -eq 50000 -and -not $dlqDlx) {
-            Write-Success "Cola DLQ '$($q.Name)' [Durable: $($found.durable), TTL: $dlqTtl ms, MaxLength: $dlqMaxLen] activa."
-        } else {
-            Write-Failure "Cola DLQ '$($q.Name)' tiene argumentos incorrectos: TTL=$dlqTtl, MaxLength=$dlqMaxLen, DLX=$dlqDlx (se esperaba TTL=604800000, MaxLength=50000 y sin DLX)."
-            exit 1
+    switch ($q.Tipo) {
+        "Dlq" {
+            $dlqTtl = $found.arguments.'x-message-ttl'
+            $dlqMaxLen = $found.arguments.'x-max-length'
+            $dlqDlx = $found.arguments.'x-dead-letter-exchange'
+            if ($dlqTtl -eq 604800000 -and $dlqMaxLen -eq 50000 -and -not $dlqDlx) {
+                Write-Success "Cola DLQ '$($q.Name)' [Durable: $($found.durable), TTL: $dlqTtl ms, MaxLength: $dlqMaxLen] activa."
+            } else {
+                Write-Failure "Cola DLQ '$($q.Name)' tiene argumentos incorrectos: TTL=$dlqTtl, MaxLength=$dlqMaxLen, DLX=$dlqDlx (se esperaba TTL=604800000, MaxLength=50000 y sin DLX)."
+                exit 1
+            }
         }
-    } else {
-        $dlx = $found.arguments.'x-dead-letter-exchange'
-        $dlk = $found.arguments.'x-dead-letter-routing-key'
-        $ttl = $found.arguments.'x-message-ttl'
-        $maxLen = $found.arguments.'x-max-length'
+        "Principal" {
+            $dlx = $found.arguments.'x-dead-letter-exchange'
+            $dlk = $found.arguments.'x-dead-letter-routing-key'
+            $ttl = $found.arguments.'x-message-ttl'
+            $maxLen = $found.arguments.'x-max-length'
 
-        if ($dlx -eq "cmd.dead.dlx" -and $dlk -eq $q.Dlk -and $ttl -eq 86400000 -and $maxLen -eq 10000) {
-            Write-Success "Cola Principal '$($q.Name)' [DLX: $dlx, DLK: $dlk, TTL: $ttl ms, MaxLength: $maxLen] configurada correctamente."
-        } else {
-            Write-Failure "Cola '$($q.Name)' tiene argumentos incorrectos: DLX=$dlx, DLK=$dlk, TTL=$ttl, MaxLength=$maxLen."
-            exit 1
+            if ($dlx -eq "cmd.dead.dlx" -and $dlk -eq $q.Dlk -and $ttl -eq 86400000 -and $maxLen -eq 10000) {
+                Write-Success "Cola Principal '$($q.Name)' [DLX: $dlx, DLK: $dlk, TTL: $ttl ms, MaxLength: $maxLen] configurada correctamente."
+            } else {
+                Write-Failure "Cola '$($q.Name)' tiene argumentos incorrectos: DLX=$dlx, DLK=$dlk, TTL=$ttl, MaxLength=$maxLen."
+                exit 1
+            }
+        }
+        "Espera" {
+            $dlx = $found.arguments.'x-dead-letter-exchange'; $dlk = $found.arguments.'x-dead-letter-routing-key'
+            $ttl = $found.arguments.'x-message-ttl'; $maxLen = $found.arguments.'x-max-length'
+            if ($dlx -eq "cmd.direct" -and $dlk -eq $q.Dlk -and $ttl -eq 10000 -and -not $maxLen) {
+                Write-Success "Cola de espera '$($q.Name)' [DLX: $dlx, DLK: $dlk, TTL: $ttl ms] configurada correctamente."
+            } else {
+                Write-Failure "Cola de espera '$($q.Name)' tiene argumentos incorrectos: DLX=$dlx, DLK=$dlk, TTL=$ttl, MaxLength=$maxLen."
+                exit 1
+            }
         }
     }
 }
@@ -130,6 +146,15 @@ foreach ($q in $expectedQueues) {
 # 4. Verificar Bindings
 Write-Info "`n4. Verificando Bindings requeridos..."
 $allBindings = Invoke-RestMethod -Uri "$HostUri/api/bindings" -Headers $headers
+
+# Validar que ninguna cola .retry tenga bindings explícitos hacia exchanges
+$retryBindings = $allBindings | Where-Object { $_.source -and $_.destination -and $_.destination.EndsWith(".retry") }
+if ($retryBindings) {
+    Write-Failure "Existe un binding explícito hacia cola de espera (.retry), lo cual es invalido."
+    exit 1
+}
+Write-Success "Ausencia de bindings hacia colas de espera (.retry) verificada."
+
 $keyBindings = @(
     @{ Source = "cmd.direct"; Dest = "q.cmd.email"; Key = "email.send" },
     @{ Source = "cmd.topic"; Dest = "q.cmd.email"; Key = "email.*" },
@@ -164,6 +189,7 @@ Write-Info "`n5. Ejecutando prueba E2E de publicación y derivación a DLQ (NACK
 # Limpiar colas de prueba
 try {
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.label/contents" -Method Delete -Headers $headers | Out-Null
+    Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.label.retry/contents" -Method Delete -Headers $headers | Out-Null
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.label.dlq/contents" -Method Delete -Headers $headers | Out-Null
 } catch {}
 
@@ -212,10 +238,13 @@ if ($dlqMsg -and $dlqMsg.payload) {
 # Limpiar colas de prueba al terminar
 try {
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.email/contents" -Method Delete -Headers $headers | Out-Null
+    Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.email.retry/contents" -Method Delete -Headers $headers | Out-Null
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.email.dlq/contents" -Method Delete -Headers $headers | Out-Null
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.warehouse/contents" -Method Delete -Headers $headers | Out-Null
+    Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.warehouse.retry/contents" -Method Delete -Headers $headers | Out-Null
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.warehouse.dlq/contents" -Method Delete -Headers $headers | Out-Null
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.label/contents" -Method Delete -Headers $headers | Out-Null
+    Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.label.retry/contents" -Method Delete -Headers $headers | Out-Null
     Invoke-RestMethod -Uri "$HostUri/api/queues/%2F/q.cmd.label.dlq/contents" -Method Delete -Headers $headers | Out-Null
 } catch {}
 

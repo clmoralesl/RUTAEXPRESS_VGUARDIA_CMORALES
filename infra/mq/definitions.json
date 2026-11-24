@@ -97,6 +97,18 @@
       }
     },
     {
+      "name": "q.cmd.email.retry",
+      "vhost": "/",
+      "type": "classic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "cmd.direct",
+        "x-dead-letter-routing-key": "email.send",
+        "x-message-ttl": 10000
+      }
+    },
+    {
       "name": "q.cmd.warehouse",
       "vhost": "/",
       "type": "classic",
@@ -121,6 +133,18 @@
       }
     },
     {
+      "name": "q.cmd.warehouse.retry",
+      "vhost": "/",
+      "type": "classic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "cmd.direct",
+        "x-dead-letter-routing-key": "warehouse.ticket",
+        "x-message-ttl": 10000
+      }
+    },
+    {
       "name": "q.cmd.label",
       "vhost": "/",
       "type": "classic",
@@ -142,6 +166,18 @@
       "arguments": {
         "x-max-length": 50000,
         "x-message-ttl": 604800000
+      }
+    },
+    {
+      "name": "q.cmd.label.retry",
+      "vhost": "/",
+      "type": "classic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "cmd.direct",
+        "x-dead-letter-routing-key": "label.gen",
+        "x-message-ttl": 10000
       }
     }
   ],
