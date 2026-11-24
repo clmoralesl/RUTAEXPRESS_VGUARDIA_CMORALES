@@ -43,6 +43,7 @@ git clone https://github.com/clmoralesl/ms-rutaexpress-catalogo.git || (cd ms-ru
 git clone https://github.com/clmoralesl/ms-rutaexpress-notificaciones.git || (cd ms-rutaexpress-notificaciones && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-auditoria.git || (cd ms-rutaexpress-auditoria && git pull)
 git clone https://github.com/clmoralesl/ms-rutaexpress-reportes.git || (cd ms-rutaexpress-reportes && git pull)
+git clone https://github.com/clmoralesl/ms-rutaexpress-mensajeria.git || (cd ms-rutaexpress-mensajeria && git pull)
 
 # Inyectar dinamicamente la URL del API Gateway en el frontend antes de la compilacion Docker
 if [ -n "$API_GATEWAY_URL" ]; then
@@ -71,6 +72,8 @@ RUTAEXPRESS_AUDITORIA_URL=http://ms-rutaexpress-auditoria:8084
 RUTAEXPRESS_REPORTES_URL=http://ms-rutaexpress-reportes:8086
 RUTAEXPRESS_ENVIOS_URL=http://ms-rutaexpress-envios:8081
 RUTAEXPRESS_NOTIFICACIONES_URL=http://ms-rutaexpress-notificaciones:8083
+RUTAEXPRESS_MENSAJERIA_URL=http://ms-rutaexpress-mensajeria:8087
+RABBITMQ_ADMIN_URL=http://$RABBITMQ_HOST:15672
 CATALOGO_SERVICE_URL=http://ms-rutaexpress-catalogo:8082
 
 # Oracle Cloud Database Configuration
@@ -99,7 +102,7 @@ EOF
 cp /opt/rutaexpress/.env /opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/.env
 
 # Enlazar microservicios dentro de RUTAEXPRESS_VGUARDIA_CMORALES para rutas relativas de compose.yml
-for repo in rutaexpress-frontend ms-rutaexpress-bff ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-notificaciones ms-rutaexpress-auditoria ms-rutaexpress-reportes; do
+for repo in rutaexpress-frontend ms-rutaexpress-bff ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-notificaciones ms-rutaexpress-auditoria ms-rutaexpress-reportes ms-rutaexpress-mensajeria; do
   [ -e "/opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/$repo" ] || ln -s "/opt/rutaexpress/$repo" "/opt/rutaexpress/RUTAEXPRESS_VGUARDIA_CMORALES/$repo"
 done
 
@@ -127,7 +130,7 @@ cat << 'EOF' > /opt/rutaexpress/actualizar.sh
 set -euo pipefail
 echo "=== Sincronizando repositorios desde GitHub ==="
 cd /opt/rutaexpress
-for repo in RUTAEXPRESS_VGUARDIA_CMORALES rutaexpress-frontend ms-rutaexpress-bff ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-notificaciones ms-rutaexpress-auditoria ms-rutaexpress-reportes; do
+for repo in RUTAEXPRESS_VGUARDIA_CMORALES rutaexpress-frontend ms-rutaexpress-bff ms-rutaexpress-envios ms-rutaexpress-catalogo ms-rutaexpress-notificaciones ms-rutaexpress-auditoria ms-rutaexpress-reportes ms-rutaexpress-mensajeria; do
   if [ -d "$repo" ]; then
     echo "Actualizando $repo (origin/main)..."
     git -C "$repo" fetch origin main
