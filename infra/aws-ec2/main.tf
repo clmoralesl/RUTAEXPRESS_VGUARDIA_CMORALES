@@ -162,6 +162,15 @@ resource "aws_security_group" "sg_ec2_mq" {
     security_groups = [aws_security_group.sg_ec2_apps.id]
   }
 
+
+  ingress {
+    description     = "API HTTP de administracion 15672 desde ec2-apps (ms-rutaexpress-mensajeria)"
+    from_port       = 15672
+    to_port         = 15672
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_ec2_apps.id]
+  }
+
   ingress {
     description = "RabbitMQ Management UI para monitoreo"
     from_port   = 15672

@@ -104,3 +104,27 @@ En local no hace falta recrear nada: `definitions.json` ya contiene los argument
 
 ### 4.6 Limites de la DLQ
 Una DLQ llena (50000 mensajes) o con mensajes de mas de 7 dias (604800000 ms) descarta mensajes en silencio. Conviene revisar las DLQ antes de que alcancen esos limites.
+
+
+---
+
+## 5. Microservicio Administrador y Recursos Protegidos (Issue #97)
+
+Para evitar colisiones entre la topologia del sistema y los recursos declarados dinamicamente por administradores mediante la API REST, se define una convencion estricta de prefijos protegidos implementada en `ms-rutaexpress-mensajeria`.
+
+### 5.1 Convencion de Prefijos del Sistema
+Toda topologia interna de los microservicios de negocio utiliza de forma obligatoria los siguientes prefijos:
+- Colas del sistema: prefijo `q.cmd.` (por ejemplo `q.cmd.email`, `q.cmd.warehouse`, `q.cmd.label` y sus DLQ `q.cmd.*.dlq`).
+- Exchanges del sistema: prefijo `cmd.` (por ejemplo `cmd.direct`, `cmd.topic`, `cmd.dead.dlx`).
+- Recursos internos de RabbitMQ: prefijo `amq.` (exchanges predeterminados del broker).
+- Exchange predeterminado: vacio (`""`).
+
+### 5.2 Reglas de Proteccion en `ms-rutaexpress-mensajeria`
+El microservicio administrador rechaza con codigo HTTP 409 (Conflicto):
+1. Creacion de colas o exchanges que comiencen con `q.cmd.`, `cmd.` o `amq.`.
+2. Eliminacion de colas o exchanges que comiencen con `q.cmd.`, `cmd.` o `amq.`.
+3. Creacion o eliminacion de bindings cuyo exchange o cola destino pertenezca a la topologia protegida.
+4. Asignacion de un exchange muerto (`x-dead-letter-exchange`) que sea un exchange protegido del sistema.
+
+### 5.3 Canal de Administracion
+La administracion se expone a traves de `ms-rutaexpress-bff` bajo la ruta `/api/bff/mensajeria/**`, restringida exclusivamente al rol `ROLE_ADMIN` y reenviada internamente a `ms-rutaexpress-mensajeria` con autenticacion interna `X-Servicio-Interno`.

@@ -1,0 +1,280 @@
+{
+	"info": {
+		"_postman_id": "97a1b2c3-d4e5-4f6a-8b9c-0d1e2f3a4b5c",
+		"name": "RutaExpress - Administrador RabbitMQ (Issue #97)",
+		"description": "Coleccion de peticiones para la administracion de topologia de RabbitMQ (colas, exchanges y bindings) a traves del BFF.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Colas",
+			"item": [
+				{
+					"name": "Listar Colas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/colas",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"colas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Cola",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre\": \"demo.cola\",\n    \"durable\": true,\n    \"ttlMs\": 86400000,\n    \"largoMaximo\": 10000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/colas",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"colas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Cola",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/colas/demo.cola?forzar=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"colas",
+								"demo.cola"
+							],
+							"query": [
+								{
+									"key": "forzar",
+									"value": "false"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Exchanges",
+			"item": [
+				{
+					"name": "Listar Exchanges",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/exchanges",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"exchanges"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Exchange",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre\": \"demo.direct\",\n    \"tipo\": \"direct\",\n    \"durable\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/exchanges",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"exchanges"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Exchange",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/exchanges/demo.direct?forzar=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"exchanges",
+								"demo.direct"
+							],
+							"query": [
+								{
+									"key": "forzar",
+									"value": "false"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Bindings",
+			"item": [
+				{
+					"name": "Listar Bindings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/bindings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"bindings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Binding",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"exchange\": \"demo.direct\",\n    \"cola\": \"demo.cola\",\n    \"clave\": \"demo.clave\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/bindings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"bindings"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Binding",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/bff/mensajeria/bindings?exchange=demo.direct&cola=demo.cola&clave=demo.clave",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"bff",
+								"mensajeria",
+								"bindings"
+							],
+							"query": [
+								{
+									"key": "exchange",
+									"value": "demo.direct"
+								},
+								{
+									"key": "cola",
+									"value": "demo.cola"
+								},
+								{
+									"key": "clave",
+									"value": "demo.clave"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "token",
+			"value": ""
+		}
+	]
+}
